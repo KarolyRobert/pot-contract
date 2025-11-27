@@ -1,0 +1,8 @@
+# flow
+update
+emulator-account.pkey
+user1.pkey
+.env
+
+# Pay attention to imports directory
+!imports

@@ -1,0 +1,177 @@
+{
+	"contracts": {
+		"Avatar": {
+			"source": "cadence/contracts/nft/Avatar.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"Charm": "cadence/contracts/nft/Charm.cdc",
+		"Chest": {
+			"source": "cadence/contracts/nft/Chest.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"DailyNeeds": {
+			"source": "cadence/contracts/market/DailyNeeds.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"GameContent": {
+			"source": "cadence/contracts/GameContent.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"GameManager": {
+			"source": "cadence/contracts/GameManager.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"GameNFT": {
+			"source": "cadence/contracts/GameNFT.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"GameToken": "cadence/contracts/GameToken.cdc",
+		"Meta": {
+			"source": "cadence/contracts/utils/Meta.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"MintSalvage": {
+			"source": "cadence/contracts/mint/MintSalvage.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"Random": {
+			"source": "cadence/contracts/utils/Random.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"RandomConsumer": {
+			"source": "cadence/contracts/utils/RandomConsumer.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"Upgrade": {
+			"source": "cadence/contracts/nft/Upgrade.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"Utils": "cadence/contracts/utils/Utils.cdc",
+		"Xorshift128plus": {
+			"source": "cadence/contracts/utils/Xorshift128plus.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		}
+	},
+	"dependencies": {
+		"Burner": {
+			"source": "mainnet://f233dcee88fe0abe.Burner",
+			"hash": "71af18e227984cd434a3ad00bb2f3618b76482842bae920ee55662c37c8bf331",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"FungibleToken": {
+			"source": "mainnet://f233dcee88fe0abe.FungibleToken",
+			"hash": "23c1159cf99b2b039b6b868d782d57ae39b8d784045d81597f100a4782f0285b",
+			"aliases": {
+				"emulator": "ee82856bf20e2aa6",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"MetadataViews": {
+			"source": "mainnet://1d7e57aa55817448.MetadataViews",
+			"hash": "9032f46909e729d26722cbfcee87265e4f81cd2912e936669c0e6b510d007e81",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "1d7e57aa55817448",
+				"testnet": "631e88ae7f1d7c20"
+			}
+		},
+		"NonFungibleToken": {
+			"source": "mainnet://1d7e57aa55817448.NonFungibleToken",
+			"hash": "b63f10e00d1a814492822652dac7c0574428a200e4c26cb3c832c4829e2778f0",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "1d7e57aa55817448",
+				"testnet": "631e88ae7f1d7c20"
+			}
+		},
+		"RandomBeaconHistory": {
+			"source": "mainnet://e467b9dd11fa00df.RandomBeaconHistory",
+			"hash": "fe7f11c46dd54446bd60d88015ffe5057d7245c4b77374e11db2adf0a8156167",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "e467b9dd11fa00df",
+				"testnet": "8c5303eaa26202d6"
+			}
+		},
+		"ViewResolver": {
+			"source": "mainnet://1d7e57aa55817448.ViewResolver",
+			"hash": "374a1994046bac9f6228b4843cb32393ef40554df9bd9907a702d098a2987bde",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "1d7e57aa55817448",
+				"testnet": "631e88ae7f1d7c20"
+			}
+		}
+	},
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testing": "127.0.0.1:3569",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": {
+				"type": "file",
+				"location": "emulator-account.pkey"
+			}
+		},
+		"user1": {
+			"address": "179b6b1cb6755e31",
+			"key": {
+				"type": "file",
+				"location": "user1.pkey"
+			}
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"Meta",
+				"GameNFT",
+				"GameManager",
+				"GameContent",
+				"GameToken",
+				"Chest",
+				"Avatar",
+				"Upgrade",
+				"Charm",
+				"Random",
+				"RandomConsumer",
+				"Xorshift128plus",
+				"MintSalvage",
+				"Utils"
+			]
+		}
+	}
+}
