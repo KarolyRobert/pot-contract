@@ -4,3 +4,4 @@ emulator-account.pkey
 user1.pkey
 imports
 .env
+testnet-admin.pkey

@@ -12,8 +12,11 @@ access(all) contract Chest {
     access(all) let lootCount:UFix64
 
     access(all) event ChestCommit(chestID:UInt64, commitBlock: UInt64, receiptID: UInt64)
+
+   
     access(all) event ChestReveal(chestID:UInt64, loot:[UInt64], commitBlock: UInt64, receiptID: UInt64)
-    
+    #removeType(ChestReveal)
+    access(all) event Reveal(chestID:UInt64, loot:[UInt64],fabatka:UFix64, commitBlock: UInt64, receiptID: UInt64)
 
     access(all) resource Receipt : RandomConsumer.RequestWrapper {
         access(all) let type:String
@@ -152,7 +155,7 @@ access(all) contract Chest {
             // aids sorsolás
             let aids = (content["aids"]!)
             let aidNames = aids.keys
-            let aidCount = Utils.getQualityIndex(quality) + 1 //.getIndex(Qualitys, quality) + 1
+            let aidCount = Utils.getQualityIndex(quality) + 1 
             let needs = Utils.chooseMore(*aidNames,rng.intArray(length:aidCount,max:aidNames.length))
         
             
@@ -296,10 +299,10 @@ access(all) contract Chest {
 
         result.append(<- GameToken.createFabatka(balance:fabatka))
 
-       // log(lootChance)
+      
         let lootMul = *(chestEvent["lootMul"] as! &UFix64)
         let lootCount = Int(self.lootCount * UFix64(lootMul))
-       // log("loopCount:".concat(lootCount.toString()))
+      
         var lootType:[String] = []
         switch(chest.type) {
             case "avatar":
@@ -312,15 +315,7 @@ access(all) contract Chest {
                 lootType = ["spell","item","need"]
         }
 
-        //computeUnitsUsed=337 memoryEstimate=19961588
-        //computeUnitsUsed=286 memoryEstimate=19401254
-        //computeUnitsUsed=299 memoryEstimate=16855966
-        //computeUnitsUsed=319 memoryEstimate=14444191
-        //computeUnitsUsed=297 memoryEstimate=10051306
-        //computeUnitsUsed=206 memoryEstimate=9068036
-        //computeUnitsUsed=141 memoryEstimate=8456658 monster
-        //computeUnitsUsed=245 memoryEstimate=9513993 avatar
-        //computeUnitsUsed=203 memoryEstimate=9056244 pvp
+       
         var i = 0
         while i < lootCount {
             let lType = lootType[Utils.chooseIndex(lootChance,rng.random())]
@@ -347,7 +342,7 @@ access(all) contract Chest {
 
         destroy chest
         destroy receipt
-        emit ChestReveal(chestID:chestId,loot:loot,commitBlock:commitBlock,receiptID:receiptID)
+        emit Reveal(chestID:chestId,loot:loot,fabatka:fabatka,commitBlock:commitBlock,receiptID:receiptID)
         return <- result
     }
 

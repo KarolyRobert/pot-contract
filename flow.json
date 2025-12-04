@@ -88,7 +88,16 @@
 		},
 		"FungibleToken": {
 			"source": "mainnet://f233dcee88fe0abe.FungibleToken",
-			"hash": "23c1159cf99b2b039b6b868d782d57ae39b8d784045d81597f100a4782f0285b",
+			"hash": "4b74edfe7d7ddfa70b703c14aa731a0b2e7ce016ce54d998bfd861ada4d240f6",
+			"aliases": {
+				"emulator": "ee82856bf20e2aa6",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"FungibleTokenMetadataViews": {
+			"source": "mainnet://f233dcee88fe0abe.FungibleTokenMetadataViews",
+			"hash": "70477f80fd7678466c224507e9689f68f72a9e697128d5ea54d19961ec856b3c",
 			"aliases": {
 				"emulator": "ee82856bf20e2aa6",
 				"mainnet": "f233dcee88fe0abe",
@@ -97,7 +106,7 @@
 		},
 		"MetadataViews": {
 			"source": "mainnet://1d7e57aa55817448.MetadataViews",
-			"hash": "9032f46909e729d26722cbfcee87265e4f81cd2912e936669c0e6b510d007e81",
+			"hash": "b290b7906d901882b4b62e596225fb2f10defb5eaaab4a09368f3aee0e9c18b1",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
 				"mainnet": "1d7e57aa55817448",
@@ -106,7 +115,7 @@
 		},
 		"NonFungibleToken": {
 			"source": "mainnet://1d7e57aa55817448.NonFungibleToken",
-			"hash": "b63f10e00d1a814492822652dac7c0574428a200e4c26cb3c832c4829e2778f0",
+			"hash": "a258de1abddcdb50afc929e74aca87161d0083588f6abf2b369672e64cf4a403",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
 				"mainnet": "1d7e57aa55817448",
@@ -146,6 +155,13 @@
 				"location": "emulator-account.pkey"
 			}
 		},
+		"testnet-admin": {
+			"address": "c8cb6dc672db2ab0",
+			"key": {
+				"type": "file",
+				"location": "testnet-admin.pkey"
+			}
+		},
 		"user1": {
 			"address": "179b6b1cb6755e31",
 			"key": {
@@ -157,6 +173,24 @@
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
+				"Meta",
+				"GameNFT",
+				"GameManager",
+				"GameContent",
+				"GameToken",
+				"Chest",
+				"Avatar",
+				"Upgrade",
+				"Charm",
+				"Random",
+				"RandomConsumer",
+				"Xorshift128plus",
+				"MintSalvage",
+				"Utils"
+			]
+		},
+		"testnet": {
+			"testnet-admin": [
 				"Meta",
 				"GameNFT",
 				"GameManager",

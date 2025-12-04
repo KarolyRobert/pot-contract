@@ -1,7 +1,8 @@
 
 import "ViewResolver"
 import "MetadataViews"
-import "FungibleToken" 
+import "FungibleToken"
+import "FungibleTokenMetadataViews"
 
 
 access(all) contract GameToken: FungibleToken {
@@ -44,11 +45,11 @@ access(all) contract GameToken: FungibleToken {
         }
 
         access(all) view fun getViews(): [Type] {
-            return []
+            return GameToken.getContractViews(resourceType: nil)
         }
 
          access(all) fun resolveView(_ view: Type): AnyStruct? {
-            return nil
+             return GameToken.resolveContractView(resourceType: nil, viewType: view)
          }
 
         init(balance:UFix64) {
@@ -61,10 +62,55 @@ access(all) contract GameToken: FungibleToken {
     }
 
     access(all) view fun getContractViews(resourceType: Type?): [Type] {
-        return []
+        return [ 
+            Type<FungibleTokenMetadataViews.FTView>(),
+            Type<FungibleTokenMetadataViews.FTDisplay>(),
+            Type<FungibleTokenMetadataViews.FTVaultData>(),
+            Type<FungibleTokenMetadataViews.TotalSupply>()
+        ]
     }
 
     access(all) fun resolveContractView(resourceType: Type?, viewType: Type): AnyStruct? {
+         switch viewType {
+            case Type<FungibleTokenMetadataViews.FTView>():
+                return FungibleTokenMetadataViews.FTView(
+                    ftDisplay: self.resolveContractView(resourceType: nil, viewType: Type<FungibleTokenMetadataViews.FTDisplay>()) as! FungibleTokenMetadataViews.FTDisplay?,
+                    ftVaultData: self.resolveContractView(resourceType: nil, viewType: Type<FungibleTokenMetadataViews.FTVaultData>()) as! FungibleTokenMetadataViews.FTVaultData?
+                )
+            case Type<FungibleTokenMetadataViews.FTDisplay>():
+                let media = MetadataViews.Media(
+                        file: MetadataViews.HTTPFile(
+                        // Change this to your own SVG image
+                        url: "https://cloud.hobbyfork.com/images/token/Fabatka.png"
+                    ),
+                    mediaType: "image/png"
+                )
+                let medias = MetadataViews.Medias([media])
+                return FungibleTokenMetadataViews.FTDisplay(
+                    // Change these to represent your own token
+                    name: "Fabatka",
+                    symbol: "TPTF",
+                    description: "Fabatka is the standard currency of the heroes in The Power of Truth. Earned through quests and battles, it is used for crafting, upgrades, and special interactions.",
+                    externalURL: MetadataViews.ExternalURL("https://cloud.hobbyfork.com/images/fabatka/Fabatka256.png"),
+                    logos: medias,
+                    socials: {}
+                )
+            case Type<FungibleTokenMetadataViews.FTVaultData>():
+                return FungibleTokenMetadataViews.FTVaultData(
+                    storagePath: self.VaultStoragePath,
+                    receiverPath: self.VaultPublicPath,
+                    metadataPath: self.VaultPublicPath,
+                    receiverLinkedType: Type<&GameToken.Fabatka>(),
+                    metadataLinkedType: Type<&GameToken.Fabatka>(),
+                    createEmptyVaultFunction: (fun(): @{FungibleToken.Vault} {
+                        return <-GameToken.createEmptyVault(vaultType: Type<@GameToken.Fabatka>())
+                    })
+                )
+            case Type<FungibleTokenMetadataViews.TotalSupply>():
+                return FungibleTokenMetadataViews.TotalSupply(
+                    totalSupply: GameToken.totalSupply
+                )
+        }
         return nil
     }
 

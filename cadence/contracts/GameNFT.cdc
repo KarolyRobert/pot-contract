@@ -22,6 +22,46 @@ access(all) contract GameNFT: NonFungibleToken {
         access(all) let type:String
 
         access(all) view fun getData():{String:AnyStruct}
+
+        access(all) view fun getViews(): [Type] {
+            return [
+                Type<MetadataViews.Display>(),
+                Type<MetadataViews.Editions>(),
+                Type<MetadataViews.NFTCollectionData>(),
+                Type<MetadataViews.NFTCollectionDisplay>(),
+                Type<MetadataViews.Serial>()
+            ]
+        }
+
+          access(all) fun resolveView(_ view: Type): AnyStruct? {
+            switch view {
+                case Type<MetadataViews.Display>():
+                    return MetadataViews.Display(
+                        name: "RoGeR NFT",
+                        description: "Something useful in The Power of Truth game.",
+                        thumbnail: MetadataViews.HTTPFile(
+                            url: "https://cloud.hobbyfork.com/images/".concat(self.category).concat("/").concat(self.type).concat(".png")
+                        )
+                    )
+                case Type<MetadataViews.Editions>():
+                    // There is no max number of NFTs that can be minted from this contract
+                    // so the max edition field value is set to nil
+                    let editionInfo = MetadataViews.Edition(name: "Initial Edition", number: self.id, max: nil)
+                    let editionList: [MetadataViews.Edition] = [editionInfo]
+                    return MetadataViews.Editions(
+                        editionList
+                    )
+                case Type<MetadataViews.Serial>():
+                    return MetadataViews.Serial(
+                        self.id
+                    )
+                case Type<MetadataViews.NFTCollectionData>():
+                    return GameNFT.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>())
+                case Type<MetadataViews.NFTCollectionDisplay>():
+                    return GameNFT.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionDisplay>())
+            }
+            return nil
+        }
     }
 
     access(all) resource BaseNFT: INFT{
@@ -40,7 +80,7 @@ access(all) contract GameNFT: NonFungibleToken {
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <-GameNFT.createEmptyCollection(nftType: Type<@GameNFT.BaseNFT>())
         }
-
+/* 
         access(all) view fun getViews(): [Type] {
             return []
         }
@@ -48,7 +88,7 @@ access(all) contract GameNFT: NonFungibleToken {
         access(all) fun resolveView(_ view: Type): AnyStruct? {
             return nil
         }
-
+*/
         init(category:String,type:String){
 
             post {
@@ -112,13 +152,9 @@ access(all) contract GameNFT: NonFungibleToken {
 
             return result
         }
-        access(all) view fun getViews(): [Type] {
-            return []
-        }
+      
 
-        access(all) fun resolveView(_ view: Type): AnyStruct? {
-            return nil
-        }
+      
 
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <-GameNFT.createEmptyCollection(nftType: Type<@GameNFT.MetaNFT>())
@@ -180,6 +216,14 @@ access(all) contract GameNFT: NonFungibleToken {
             let keys = self.ownedNFTs.keys
             let result:{UInt64:{String:AnyStruct}} = {}
             for id in keys {
+                result[id] = (&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?) as! &{GameNFT.INFT}.getData()
+            }
+            return result
+        }
+
+        access(all) view fun getLoot(_ ids:[UInt64]):{UInt64:{String:AnyStruct}} {
+            let result:{UInt64:{String:AnyStruct}} = {}
+            for id in ids {
                 result[id] = (&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?) as! &{GameNFT.INFT}.getData()
             }
             return result
@@ -327,21 +371,25 @@ access(all) contract GameNFT: NonFungibleToken {
                 )
                 return collectionData
             case Type<MetadataViews.NFTCollectionDisplay>():
-                let media = MetadataViews.Media(
+                let logo = MetadataViews.Media(
                     file: MetadataViews.HTTPFile(
-                        url: "https://www.hobbyfork.com/power_of_truth/collection.svg"
+                        url: "https://cloud.hobbyfork.com/images/collection/logo.png"
                     ),
-                    mediaType: "image/svg+xml"
+                    mediaType: "image/png"
+                )
+                let banner = MetadataViews.Media(
+                    file: MetadataViews.HTTPFile(
+                        url: "https://cloud.hobbyfork.com/images/collection/banner.jpg"
+                    ),
+                    mediaType: "image/jpeg"
                 )
                 return MetadataViews.NFTCollectionDisplay(
-                    name: "Power of Truth",
-                    description: "“Since men are unable to make what is just strong, they have made what is strong just.” — Blaise Pascal. \nJustice? Handled. — RoGeR",
-                    externalURL: MetadataViews.ExternalURL("https://www.hobbyfork.com/power_of_truth"),
-                    squareImage: media,
-                    bannerImage: media,
-                    socials: {
-                        //"twitter": MetadataViews.ExternalURL("Add a link to your project's twitter")
-                    } 
+                    name: "The Power of Truth",
+                    description: "",
+                    externalURL: MetadataViews.ExternalURL("https://cloud.hobbyfork.com/the_power_of_truth"),
+                    squareImage: logo,
+                    bannerImage: banner,
+                    socials: {} 
                 )
         }
         return nil
