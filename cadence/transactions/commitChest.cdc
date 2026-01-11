@@ -6,6 +6,7 @@ import "NonFungibleToken"
 transaction(chestID:UInt64) {
     
     prepare(user: auth (BorrowValue,SaveValue) &Account) {
+        let receipts = user.storage.borrow<auth (Random.TakePut) &Random.ReceiptStore>(from:Random.ReceiptStoragePath) ?? panic("ReceiptStore")
         let collection = user.storage.borrow<auth (NonFungibleToken.Withdraw)  &GameNFT.Collection>(from:GameNFT.CollectionStoragePath) ?? panic("Collection not public")
         let chest <- collection.withdraw(withdrawID: chestID) as! @{GameNFT.INFT}
 
@@ -14,8 +15,8 @@ transaction(chestID:UInt64) {
       //  if user.storage.type(at: Chest.ChestReceiptPath) != nil {
       //      panic("Storage collision at path=".concat(Chest.ChestReceiptPath.toString()).concat(" a Receipt is already stored!"))
       //  }
-
-        user.storage.save(<- receipt,to:Random.ReceiptStoragePath)
+        receipts.put(receipt: <- receipt)
+        //user.storage.save(<- receipt,to:Random.ReceiptStoragePath)
     }
 
     // flow transactions send cadence/transactions/commitChest.cdc --args-json '[{"type":"UInt64", "value":"1"}]' --signer user1 --network emulator

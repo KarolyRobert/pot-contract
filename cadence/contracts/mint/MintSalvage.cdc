@@ -28,16 +28,21 @@ access(all) contract MintSalvage {
                 quality = *(rolled["quality"] as! &String)
             }
 
-            let talizman <- GameNFT.minter.mintMeta(
+            let consts = GameContent.getConsts()
+            let baseNeedCount = Utils.getNeedBase(quality: quality, category:"charm")
+            let needCount = Utils.getNeedCount(base: baseNeedCount, level:0, category: "charm", Consts: consts)
+
+            let charm <- GameNFT.minter.mintMeta(
                 category:"charm",
                 type:category,
                 meta:{
                     "type":charmItem,
                     "level":0,
+                    "needs":needCount,
                     "quality":quality,
                     "zone":zone
                 })
-            result.append(<- talizman)
+            result.append(<- charm)
         }
         // uniq mint
         let uniqs = GameContent.getContent(key:"uniqs")
@@ -46,14 +51,12 @@ access(all) contract MintSalvage {
         for key in uniqNames {
             uniqChance.append((uniqs[key] as! &{String:UFix64})["chance"]!)
         }
-        log(uniqNames)
-        log(uniqChance)
+       
         while lootCount > 0 {
             let r = rng.random()
-            log(r)
             let uniqName = uniqNames[Utils.chooseIndex(uniqChance,r)]
             //let uniqName = uniqNames[rng.nextInt(max: uniqNames.length)]
-            let uniq <- GameNFT.minter.mintBase(category: "uinq", type: uniqName)
+            let uniq <- GameNFT.minter.mintBase(category: "uniq", type: uniqName)
             result.append(<- uniq)
             lootCount = lootCount - 1
         }

@@ -5,6 +5,7 @@ access(all) contract GameContent {
 
     access(account) var eventName:String
     access(all) let zoneSize:Int
+   
 
     access(all) var currentVersion:Version
     access(all) let contentPaths: {String:StoragePath}
@@ -96,10 +97,10 @@ access(all) contract GameContent {
                 }
             }
         }
+       
     }
 
     access(contract) fun saveField(key:String,value:{String:AnyStruct}) {
-        log("update_content:".concat(key))
         let path = self.contentPaths[key] ?? panic("Missing content: ".concat(key))
         self.account.storage.save(value,to:path)
     }
@@ -111,8 +112,7 @@ access(all) contract GameContent {
     }
 
     access(all) view fun getContent(key:String):&{String:AnyStruct} {
-        //self.account.storage.load<{String:AnyStruct}>(from: self.contentPaths[key]!) ?? panic("getContent anomaly!".concat(key))  //  computeUnitsUsed=1822 memoryEstimate=37617620 
-        return self.account.storage.borrow<&{String:AnyStruct}>(from: self.contentPaths[key]!) ?? panic("getContent anomaly!".concat(key)) // computeUnitsUsed=1469 memoryEstimate=28226777 // computeUnitsUsed=1501 memoryEstimate=28545714
+        return self.account.storage.borrow<&{String:AnyStruct}>(from: self.contentPaths[key]!) ?? panic("getContent anomaly!".concat(key))
     }
 
     access(all) view fun getZoneContent(key:String,zone:Int):&{String:AnyStruct} {

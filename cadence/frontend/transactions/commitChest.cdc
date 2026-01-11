@@ -5,15 +5,16 @@ import "NonFungibleToken"
 
 transaction(chestID:UInt64) {
     
-    prepare(user: auth (BorrowValue,SaveValue) &Account) {
-        
-        let collection = user.storage.borrow<auth (NonFungibleToken.Withdraw)  &GameNFT.Collection>(from:GameNFT.CollectionStoragePath) ?? panic("Collection not public")
+    prepare(user: auth (BorrowValue) &Account) {
+
+        let collection = user.storage.borrow<auth (NonFungibleToken.Withdraw)  &GameNFT.Collection>(from:GameNFT.CollectionStoragePath) ?? panic("Collection")
+        let receipts = user.storage.borrow<auth (Random.TakePut) &Random.ReceiptStore>(from:Random.ReceiptStoragePath) ?? panic("ReceiptStore")
         let chest <- collection.withdraw(withdrawID: chestID) as! @{GameNFT.INFT}
 
         let receipt <- Chest.commitChest(chest: <- chest)
 
 
-        user.storage.save(<- receipt,to:Random.ReceiptStoragePath)
+        receipts.put(receipt: <- receipt)
     }
 
 }

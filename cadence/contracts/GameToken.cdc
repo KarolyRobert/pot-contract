@@ -17,7 +17,8 @@ access(all) contract GameToken: FungibleToken {
         access(all) var balance: UFix64
 
         access(contract) fun burnCallback() {
-            GameToken.totalSupply = GameToken.totalSupply - self.balance    
+            GameToken.totalSupply = GameToken.totalSupply - self.balance
+            self.balance = 0.0    
         }
 
         access(all) view fun getSupportedVaultTypes(): {Type: Bool} {

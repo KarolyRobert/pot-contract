@@ -19,6 +19,7 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"Exchange": "cadence/contracts/Exchange.cdc",
 		"GameContent": {
 			"source": "cadence/contracts/GameContent.cdc",
 			"aliases": {
@@ -155,11 +156,11 @@
 				"location": "emulator-account.pkey"
 			}
 		},
-		"testnet-admin": {
-			"address": "c8cb6dc672db2ab0",
+		"roger-admin": {
+			"address": "7faa51f4f97bddfa",
 			"key": {
 				"type": "file",
-				"location": "testnet-admin.pkey"
+				"location": "roger-admin.pkey"
 			}
 		},
 		"user1": {
@@ -178,6 +179,7 @@
 				"GameManager",
 				"GameContent",
 				"GameToken",
+				"Exchange",
 				"Chest",
 				"Avatar",
 				"Upgrade",
@@ -190,12 +192,13 @@
 			]
 		},
 		"testnet": {
-			"testnet-admin": [
+			"roger-admin": [
 				"Meta",
 				"GameNFT",
 				"GameManager",
 				"GameContent",
 				"GameToken",
+				"Exchange",
 				"Chest",
 				"Avatar",
 				"Upgrade",

@@ -4,7 +4,10 @@ import "RandomConsumer"
 
 access(all) contract Random {
 
+    access(all) entitlement TakePut
+
     access(all) let ReceiptStoragePath: StoragePath
+    access(all) let ReceiptPublicPath: PublicPath
 
     access(self) let consumer:@RandomConsumer.Consumer
     
@@ -69,9 +72,49 @@ access(all) contract Random {
         return <- self.consumer.requestRandomness()
     }
 
+    access(all) resource ReceiptStore {
+        access(all) var receipts: @{UInt64:{RandomConsumer.RequestWrapper}}
+
+        access(TakePut) fun put(receipt: @{RandomConsumer.RequestWrapper}) {
+            let res <- receipt
+            self.receipts[res.uuid] <-! res
+        }
+
+        access(TakePut) fun getReceipts(_ ids:[UInt64]):@[{RandomConsumer.RequestWrapper}] {
+            let result:@[{RandomConsumer.RequestWrapper}] <- []
+            while ids.length > 0 {
+                let id = ids.removeFirst()
+                let receipt <- self.receipts.remove(key: id) 
+                ?? panic("Receipt not found")
+                result.append(<-receipt)
+            }
+            
+            return <- result
+        }
+
+        access(all) view fun getData():{UInt64:{String:AnyStruct}} {  
+            let keys = self.receipts.keys
+            let result:{UInt64:{String:AnyStruct}} = {}
+            for id in keys {
+                result[id] = (&self.receipts[id] as &{RandomConsumer.RequestWrapper}?)!.getData()
+            }
+            return result
+        }
+
+
+        init(){
+            self.receipts <- {}
+        }
+    }
+
+    access(all) fun createEmptyReceiptStore():@ReceiptStore {
+        return <- create ReceiptStore()
+    }
+
     init() {
         self.consumer <- RandomConsumer.createConsumer()
         self.ReceiptStoragePath = StoragePath(identifier: "receipt_".concat(self.account.address.toString()))!
+        self.ReceiptPublicPath = PublicPath(identifier: "receipt_public_".concat(self.account.address.toString()))!
     }
 
 

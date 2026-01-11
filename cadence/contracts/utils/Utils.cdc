@@ -32,14 +32,46 @@ access(all) contract Utils {
         return base + addition
     }
 
+
+    access(all) view fun pow(base:UFix64,exp:Int):UFix64 {
+        if exp == 0 {
+            return 1.0
+        }
+
+        var result: UFix64 = 1.0
+        var e = 0
+
+        while e < exp {
+            result = result * base
+            e = e + 1
+        }
+
+        return result
+    }
+
+    access(all) view fun getUpgradePrice(category:String,meta:{String:AnyStruct},Consts:&{String:{String:AnyStruct}}):UFix64 {
+        let level = meta["level"] as! Int
+        let quality = meta["quality"] as! String
+        let zone = meta["zone"] as! Int
+        let fabatka = Consts["fabatka"] as! &{String:AnyStruct}
+        let prices = fabatka["upgrade"] as! &{String:UFix64}
+        let levelMul = self.pow(base:*(fabatka["level"] as! &UFix64),exp:level)
+        let qualityMul = self.pow(base:*(fabatka["quality"] as! &UFix64),exp:self.getQualityIndex(quality))
+        let zoneMul = self.pow(base:*(fabatka["zone"] as! &UFix64),exp:zone)
+        let basePrice = prices[category]!
+        return basePrice * levelMul * qualityMul * zoneMul
+    }
+
+    // ez a függvény csak az avatár fejlesztésekor van hasnálva
     access(all) view fun getPrice(category:String,level:Int,quality:String,Consts:&{String:{String:AnyStruct}}):UFix64 {
         let fabatka = Consts["fabatka"] as! &{String:AnyStruct}
         let prices = fabatka["upgrade"] as! &{String:UFix64}
-        let levelMul = *(fabatka["level"] as! &UFix64) * UFix64(level)
-        let qualityMul = *(fabatka["quality"] as! &UFix64) * UFix64(self.getQualityIndex(quality) + 1)
+        let levelMul = self.pow(base:*(fabatka["level"] as! &UFix64),exp:level)
+        let qualityMul = self.pow(base:*(fabatka["quality"] as! &UFix64),exp:self.getQualityIndex(quality))
         let basePrice = prices[category]!
         return basePrice * levelMul * qualityMul
-    } 
+    }
+
 
     access(all) view fun chooseIndex(_ array:[UFix64],_ r:UFix64):Int {
         var cum: UFix64 = 0.0
@@ -91,7 +123,7 @@ access(all) contract Utils {
     }
 
     access(all) view fun getNeedBase(quality:String,category:String):Int {
-        if category == "talizman" {
+        if category == "charm" {
             return (self.getQualityIndex(quality) + 2) / 2
         }else{
             return self.getQualityIndex(quality) + 1

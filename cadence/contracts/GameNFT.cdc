@@ -5,6 +5,8 @@ import "Meta"
 
 access(all) contract GameNFT: NonFungibleToken {
 
+    access(all) event EquipAvatar(avatarID:UInt64)
+
     access(all) entitlement Equip
 
     access(contract) var mintedCount:UInt64
@@ -130,6 +132,7 @@ access(all) contract GameNFT: NonFungibleToken {
                     break
                 case "avatar":
                     resultMeta["level"] = meta["level"]
+                    resultMeta["class"] = meta["class"]
                     resultMeta["subClass"] = meta["subClass"]
                     resultMeta["charm"] = meta["charm"]
                     resultMeta["skills"] = meta["skills"]
@@ -139,6 +142,7 @@ access(all) contract GameNFT: NonFungibleToken {
                 case "charm":
                     resultMeta["level"] = meta["level"]
                     resultMeta["type"] = meta["type"]
+                    resultMeta["needs"] = meta["needs"]
                     break
                 case "chest": // "level":10,"wLevel":2,"event":"default","class":"elit"
                     resultMeta["level"] = meta["level"]
@@ -153,6 +157,9 @@ access(all) contract GameNFT: NonFungibleToken {
             return result
         }
       
+        access(all) view fun getMeta():{String:AnyStruct} {
+            return self.meta.build()
+        }
 
       
 
@@ -178,8 +185,6 @@ access(all) contract GameNFT: NonFungibleToken {
 
         access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
             let nft <- token as! @{GameNFT.INFT}
-            log("deposit:")
-            log(nft.getData())
             self.ownedNFTs[nft.id] <-! nft
         }
 
@@ -276,12 +281,14 @@ access(all) contract GameNFT: NonFungibleToken {
                         let zone = level / GameContent.zoneSize
                         let avatarClass = currentMeta["class"] as! String
 
-                        if let talizmanRef = &self.ownedNFTs[newCharm] as &{NonFungibleToken.NFT}? {
-                            if let talizman = talizmanRef as?  &GameNFT.MetaNFT {
+                        if let charmRef = &self.ownedNFTs[newCharm] as &{NonFungibleToken.NFT}? {
+                            if let talizman = charmRef as?  &GameNFT.MetaNFT {
                                 if talizman.category == "charm" {
                                     currentMeta["charm"] = newCharm
                                 }
                             }
+                        }else{
+                            currentMeta["charm"] = newCharm
                         }
 
                         for class in currentItems.keys {
@@ -298,6 +305,8 @@ access(all) contract GameNFT: NonFungibleToken {
                                             }
                                         } 
                                     }
+                                }else{
+                                    currentItems[class] = iid
                                 }
                             } 
                         }
@@ -318,6 +327,9 @@ access(all) contract GameNFT: NonFungibleToken {
                                             set = true
                                         }
                                     }
+                                }else{
+                                    currentSpells[index] = sid
+                                    set = true
                                 }
                                 if !set {
                                     currentSpells[index] = 0
@@ -328,6 +340,7 @@ access(all) contract GameNFT: NonFungibleToken {
                         currentMeta["items"] = currentItems
                         currentMeta["spells"] = currentSpells
                         avatar.meta.update(currentMeta)
+                        emit EquipAvatar(avatarID:avatarId)
                     }
                 }
             }
@@ -399,12 +412,10 @@ access(all) contract GameNFT: NonFungibleToken {
         return <- create Collection()
     }
 
-
     init(){
         self.mintedCount = 0
         self.CollectionStoragePath = StoragePath(identifier: "PotNFT_".concat(self.account.address.toString()))!
         self.CollectionPublicPath = PublicPath(identifier: "PotNFT_public_".concat(self.account.address.toString()))!
         self.minter <- create Minter()
-        
     }
 }

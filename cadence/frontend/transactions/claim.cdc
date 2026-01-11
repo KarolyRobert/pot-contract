@@ -1,6 +1,7 @@
 import "GameManager"
 import "GameNFT"
 import "GameToken"
+import "Random"
 
 transaction(chests:[String]) {
 
@@ -17,10 +18,16 @@ transaction(chests:[String]) {
             user.storage.save(<- collectionRes, to: GameNFT.CollectionStoragePath)
             let collectionCap = user.capabilities.storage.issue<&GameNFT.Collection>(GameNFT.CollectionStoragePath)
             user.capabilities.publish(collectionCap, at: GameNFT.CollectionPublicPath)
+
             let vaultRes <- GameToken.createEmptyVault(vaultType:Type<@GameToken.Fabatka>())
             user.storage.save(<- vaultRes, to: GameToken.VaultStoragePath)
             let vaultCap = user.capabilities.storage.issue<&GameToken.Fabatka>(GameToken.VaultStoragePath)
             user.capabilities.publish(vaultCap, at: GameToken.VaultPublicPath)
+
+            let receiptStoreRes <- Random.createEmptyReceiptStore()
+            user.storage.save(<- receiptStoreRes, to: Random.ReceiptStoragePath)
+            let receiptCap = user.capabilities.storage.issue<&Random.ReceiptStore>(Random.ReceiptStoragePath)
+            user.capabilities.publish(receiptCap, at: Random.ReceiptPublicPath)
 
             self.collection = user.capabilities.borrow<&GameNFT.Collection>(GameNFT.CollectionPublicPath)!
         }

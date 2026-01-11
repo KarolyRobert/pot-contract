@@ -13,6 +13,7 @@ access(all) contract RandomConsumer {
     access(all) event RandomnessSourced(requestUUID: UInt64, block: UInt64, randomSource: [UInt8])
     access(all) event RandomnessFulfilled(requestUUID: UInt64, randomResult: UInt64)
     access(all) event RandomnessFulfilledWithPRG(requestUUID: UInt64)
+    access(all) event RevealResult(success:Bool,nfts:[UInt64],token:UFix64,block:UInt64,receiptID:UInt64)
 
     access(all) fun createConsumer(): @Consumer {
         return <-create Consumer()
@@ -28,10 +29,48 @@ access(all) contract RandomConsumer {
     /// with the inner resource outside of the default implementations. The post-conditions ensure that implementations
     /// cannot act dishonestly even if they override the default implementations.
     ///
+
+    access(all) resource RevealOutcome {
+        access(all) let success:Bool
+        access(all) let nftIds:[UInt64]
+        access(all) let tokenBalance:UFix64
+        access(all) var result:@[AnyResource]?
+
+        access(all) fun getResult():@[AnyResource] {
+            let result <- self.result <- nil
+            return <- result!
+        }
+
+        init(success:Bool,ids:[UInt64],balance:UFix64,result:@[AnyResource]){
+            self.success = success
+            self.nftIds = ids
+            self.tokenBalance = balance
+            self.result <- result
+        }
+    }
+
+    access(all) fun createOutcome(success:Bool,ids:[UInt64],balance:UFix64,result:@[AnyResource]):@RevealOutcome {
+        return <- create RevealOutcome(success:success,ids:ids,balance:balance,result: <- result)
+    }
+
     access(all) resource interface RequestWrapper {
         /// The Request contained within the resource
         access(all) var request: @Request?
-        access(all) let type:String
+        
+
+        
+        access(all) view fun getData():{String:AnyStruct}
+
+        access(contract) fun resolve():@RevealOutcome
+
+        access(Reveal) fun reveal():@[AnyResource] {
+            let result <- self.resolve()
+            let block = getCurrentBlock().height
+            emit RevealResult(success:result.success,nfts:result.nftIds,token:result.tokenBalance,block:block,receiptID:self.uuid)
+            let loot <- result.getResult()
+            destroy result
+            return <- loot
+        }
 
         /// Returns the block height of the Request contained within the resource
         ///
@@ -74,6 +113,7 @@ access(all) contract RandomConsumer {
             let req <- self.request <- nil
             return <- req!
         }
+
     }
 
     /// A resource representing a request for randomness
