@@ -1,4 +1,4 @@
-import "Exchange"
+import "GameNPC"
 
 
 transaction() {
@@ -6,7 +6,7 @@ transaction() {
     
     prepare(admin: auth (BorrowValue)  &Account) {
 
-        let manager = admin.storage.borrow<&Exchange.ExchangeManager>(from:/storage/ExchangeManager) ?? panic("Only the owner can call this function")
+        let manager = admin.storage.borrow<&GameNPC.ExchangeManager>(from:/storage/ExchangeManager) ?? panic("Only the owner can call this function")
         manager.initExchange()
       
     }

@@ -1,6 +1,8 @@
 import "NonFungibleToken"
 import "MetadataViews"
 import "GameContent"
+import "GameToken"
+import "FlowToken"
 import "Meta"
 
 access(all) contract GameNFT: NonFungibleToken {
@@ -35,14 +37,14 @@ access(all) contract GameNFT: NonFungibleToken {
             ]
         }
 
-          access(all) fun resolveView(_ view: Type): AnyStruct? {
+        access(all) fun resolveView(_ view: Type): AnyStruct? {
             switch view {
                 case Type<MetadataViews.Display>():
                     return MetadataViews.Display(
                         name: "RoGeR NFT",
                         description: "Something useful in The Power of Truth game.",
                         thumbnail: MetadataViews.HTTPFile(
-                            url: "https://cloud.hobbyfork.com/images/".concat(self.category).concat("/").concat(self.type).concat(".png")
+                            url: "https://cloud.hobbyfork.com/images/\(self.category)/\(self.type).png"
                         )
                     )
                 case Type<MetadataViews.Editions>():
@@ -104,7 +106,66 @@ access(all) contract GameNFT: NonFungibleToken {
             self.type = type
         }
 
-        
+    }
+
+    access(all) resource PackNFT: INFT {
+        access(all) let id:UInt64
+        access(all) let category:String
+        access(all) let type:String
+        access(account) var packed: @{UInt64: {GameNFT.INFT}}
+
+        access(all) view fun getData():{String:AnyStruct} {
+            let result:{String:AnyStruct} = {
+                "id":self.id,
+                "category":self.category,
+                "type":self.type
+            }
+            let keys = self.packed.keys
+            let meta:{String:AnyStruct} = {}
+            meta["size"] = keys.length
+            switch(self.type){
+                case "box":
+                    break
+                case "stack":
+                    let nftType = (&self.packed[keys[0]] as &{GameNFT.INFT}?)!.getData()
+                    let category = nftType["category"] as! String
+                    let type = nftType["type"] as! String
+                    meta["content"] = {"category":category,"type":type}
+                    break
+            }
+            result["meta"] = meta
+            return result
+        }
+
+        access(all) view fun getContent():{UInt64:{String:AnyStruct}} {
+            let result:{UInt64:{String:AnyStruct}} = {}
+            let ids = self.packed.keys
+            for id in ids {
+                result[id] = (&self.packed[id] as &{GameNFT.INFT}?)!.getData()
+            }
+            return result
+        }
+
+        access(account) fun unpack():@{UInt64: {GameNFT.INFT}} {
+            let packed:@{UInt64: {GameNFT.INFT}} <- self.packed <- {}
+            return <- packed 
+        }
+
+        access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
+            return <-GameNFT.createEmptyCollection(nftType: Type<@GameNFT.PackNFT>())
+        }
+
+        init(category:String,type:String,packed:@{UInt64: {GameNFT.INFT}}){
+            post {
+                GameNFT.mintedCount == before(GameNFT.mintedCount) + 1
+                self.id == GameNFT.mintedCount
+            }
+            GameNFT.mintedCount = GameNFT.mintedCount + 1
+            self.id = GameNFT.mintedCount
+            self.category = category
+            self.type = type
+            self.packed <- packed
+        }
     }
 
     access(all) resource MetaNFT: INFT {
@@ -161,8 +222,6 @@ access(all) contract GameNFT: NonFungibleToken {
             return self.meta.build()
         }
 
-      
-
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <-GameNFT.createEmptyCollection(nftType: Type<@GameNFT.MetaNFT>())
         }
@@ -179,6 +238,8 @@ access(all) contract GameNFT: NonFungibleToken {
             self.meta = Meta.MetaBuilder(meta)
         }
     }
+
+
 
     access(all) resource Collection: NonFungibleToken.Collection {
         access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
@@ -202,15 +263,29 @@ access(all) contract GameNFT: NonFungibleToken {
              return &self.ownedNFTs[id] // as &{NonFungibleToken.NFT} 
         }
 
+        access(NonFungibleToken.Withdraw) fun unpack(packID: UInt64) {
+            let pack <- self.withdraw(withdrawID: packID) as! @GameNFT.PackNFT
+            let content <- pack.unpack()
+            let keys = content.keys
+            while keys.length > 0 {
+                let key = keys.removeFirst()
+                let nft <- content.remove(key: key)!
+                self.deposit(token: <- nft)
+            }
+            destroy content
+            destroy pack
+        }
+
         access(all) view fun getSupportedNFTTypes(): {Type: Bool} {
             return {
                 Type<@GameNFT.BaseNFT>(): true,
-                Type<@GameNFT.MetaNFT>(): true
+                Type<@GameNFT.MetaNFT>(): true,
+                Type<@GameNFT.PackNFT>(): true
             }
         }
 
         access(all) view fun isSupportedNFTType(type: Type): Bool {
-            return type == Type<@GameNFT.BaseNFT>() || type == Type<@GameNFT.MetaNFT>()
+            return type == Type<@GameNFT.BaseNFT>() || type == Type<@GameNFT.MetaNFT>() || type == Type<@GameNFT.PackNFT>()
         }
 
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
@@ -224,6 +299,10 @@ access(all) contract GameNFT: NonFungibleToken {
                 result[id] = (&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?) as! &{GameNFT.INFT}.getData()
             }
             return result
+        }
+
+        access(all) view fun getPackContent(_ id:UInt64):{UInt64:{String:AnyStruct}} {
+            return ((&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?) as! &GameNFT.PackNFT).getContent()
         }
 
         access(all) view fun getLoot(_ ids:[UInt64]):{UInt64:{String:AnyStruct}} {
@@ -263,8 +342,6 @@ access(all) contract GameNFT: NonFungibleToken {
             }
             return result
         }
-
-
 
         access(Equip) fun setAvatarEquipment(avatarId:UInt64,equipment:{String:AnyStruct}) {
            
@@ -361,6 +438,10 @@ access(all) contract GameNFT: NonFungibleToken {
         access(all) fun mintMeta(category:String,type:String,meta:{String:AnyStruct}): @{INFT} {   //@GameNFT.MetaNFT{NonFungibleToken.NFT} {
             return <-create GameNFT.MetaNFT(category:category,type:type,meta:meta)
         }
+
+        access(all) fun mintPack(type:String,packed:@{UInt64: {GameNFT.INFT}}): @PackNFT {
+            return <-create GameNFT.PackNFT(category:"pack",type:type,packed: <- packed)
+        }
     }
 
     access(all) view fun getContractViews(resourceType: Type?): [Type] {
@@ -412,10 +493,30 @@ access(all) contract GameNFT: NonFungibleToken {
         return <- create Collection()
     }
 
+    access(all) fun collect(loot:@[AnyResource],collection:&GameNFT.Collection?,fabatka:&GameToken.Fabatka?,flow:&FlowToken.Vault?){
+        while loot.length > 0 {
+            let res <- loot.removeFirst()
+            if let base <- res as? @GameNFT.BaseNFT{
+                collection!.deposit(token: <- base)
+            }else if let meta <- res as? @GameNFT.MetaNFT{
+                collection!.deposit(token: <- meta)
+            }else if let pack <- res as? @GameNFT.PackNFT{
+                collection!.deposit(token: <- pack)
+            }else if let token <- res as? @GameToken.Fabatka {
+                fabatka!.deposit(from:<-token)
+            }else if let flowToken <- res as? @FlowToken.Vault {
+                flow!.deposit(from: <- flowToken)
+            }else{
+                panic("Unexpected result!")
+            }
+        }
+        destroy loot
+    }
+
     init(){
         self.mintedCount = 0
-        self.CollectionStoragePath = StoragePath(identifier: "PotNFT_".concat(self.account.address.toString()))!
-        self.CollectionPublicPath = PublicPath(identifier: "PotNFT_public_".concat(self.account.address.toString()))!
+        self.CollectionStoragePath = StoragePath(identifier: "PotNFT_\(self.account.address.toString())")!
+        self.CollectionPublicPath = PublicPath(identifier: "PotNFT_public_\(self.account.address.toString())")!
         self.minter <- create Minter()
     }
 }

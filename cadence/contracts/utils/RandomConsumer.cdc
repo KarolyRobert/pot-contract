@@ -151,8 +151,7 @@ access(all) contract RandomConsumer {
                 !self.fulfilled:
                 "RandomConsumer.Request.fulfill(): The random request has already been fulfilled."
                 self.block < getCurrentBlock().height:
-                "RandomConsumer.Request.fulfill(): Cannot fulfill random request before the eligible block height of "
-                .concat((self.block + 1).toString())
+                "RandomConsumer.Request.fulfill(): Cannot fulfill random request before the eligible block height of \((self.block + 1).toString())"
             }
             self.fulfilled = true
             let res = RandomBeaconHistory.sourceOfRandomness(atBlockHeight: self.block).value

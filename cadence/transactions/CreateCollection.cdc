@@ -10,7 +10,7 @@ transaction {
             log("Már van Collection!")
             return
         }
-
+        
         let collection <- GameNFT.createEmptyCollection(nftType: Type<@GameNFT.BaseNFT>())
         acct.storage.save(<- collection, to: GameNFT.CollectionStoragePath)
         let collectionCap = acct.capabilities.storage.issue<&GameNFT.Collection>(GameNFT.CollectionStoragePath)

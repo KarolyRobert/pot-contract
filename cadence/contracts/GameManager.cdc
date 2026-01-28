@@ -2,11 +2,13 @@ import "GameNFT"
 import "GameToken"
 import "FungibleToken"
 import "GameContent"
+import "GameIdentity"
 
 
 access(all) contract GameManager {
 
     access(all) entitlement Mint
+    access(all) entitlement Gamer
     access(all) entitlement Update
     access(all) entitlement GameEvent
     
@@ -21,10 +23,17 @@ access(all) contract GameManager {
     access(all) resource Manager {
         
         access(Mint) fun createChest(winner:Address,type:String,gameId:String,hash:String,meta:{String:AnyStruct}): @{GameNFT.INFT} {
-            //let Meta = PoTUtils.MetaBuilder({}).int("zone",1).str("class","avatar").build()
+            let user = getAccount(winner)
+            let winGamer =  user.capabilities.borrow<&GameIdentity.Gamer>(GameIdentity.GamerPublicPath) ?? panic("Missing Gamer!")
+            winGamer.win()
+
             let nft <- GameNFT.minter.mintMeta(category: "chest", type:type, meta: meta)
             emit createChestEvent(id:nft.id,winner:winner,type:type,gameId:gameId,hash:hash)
             return <- nft
+        }
+
+        access(Gamer) fun createGamer():@GameIdentity.Gamer {
+            return <- GameIdentity.createGamer()
         }
 
         access(Mint) fun test(category:String,type:String,meta:{String:AnyStruct}):@{GameNFT.INFT}{

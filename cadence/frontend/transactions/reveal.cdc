@@ -13,29 +13,12 @@ transaction(keys:[UInt64]) {
         let collection = user.capabilities.borrow<&GameNFT.Collection>(GameNFT.CollectionPublicPath) ?? panic("Nincs collection")
         let vault = user.capabilities.borrow<&GameToken.Fabatka>(GameToken.VaultPublicPath) ?? panic("Nincs collection")
 
-
-        fun collect(_ loot:@[AnyResource]){
-            while loot.length > 0 {
-                let res <- loot.removeFirst()
-                if let base <- res as? @GameNFT.BaseNFT{
-                    collection.deposit(token: <- base)
-                }else if let meta <- res as? @GameNFT.MetaNFT{
-                    collection.deposit(token: <- meta)
-                }else if let token <- res as? @GameToken.Fabatka {
-                    vault.deposit(from:<-token)
-                }else{
-                    panic("Unexpected result!")
-                }
-            }
-            destroy loot
-        }
-
         let receipts <- store.getReceipts(keys)
 
         while receipts.length > 0 {
             let receipt <- receipts.removeFirst()
             let loot <-receipt.reveal()
-            collect(<- loot)
+            GameNFT.collect(loot:<- loot,collection:collection,fabatka:vault,flow:nil)
             destroy receipt
         }
         destroy receipts

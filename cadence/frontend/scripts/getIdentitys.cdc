@@ -1,0 +1,21 @@
+
+import "GameIdentity"
+
+access(all) fun main(users:[Address]): {String:AnyStruct} {
+
+    let result:{String:AnyStruct} = {}
+
+    while users.length > 0 {
+        let address = users.removeFirst()
+        let account = getAccount(address)
+        if let gamer = account.capabilities.borrow<&GameIdentity.Gamer>(GameIdentity.GamerPublicPath) {
+            let icon = gamer.getIcon()
+            result[address.toString()] =  {"address":address,"icon":icon}
+        }else{
+            result[address.toString()] = {"address":address,"icon":{"avatar":"default","id":0}}
+        }
+       
+    }
+    return result
+
+}

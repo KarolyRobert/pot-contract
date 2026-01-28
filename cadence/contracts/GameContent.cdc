@@ -80,9 +80,9 @@ access(all) contract GameContent {
 
             if zones.keys.length > 0 {
                 for z in zones.keys {
-                    let storeKey = key.concat("_").concat(z.toString())
+                    let storeKey = "\(key)_\(z.toString())"
                     if self.contentPaths[storeKey] == nil {
-                        self.addKey(storeKey,StoragePath(identifier: "/".concat(storeKey))!)
+                        self.addKey(storeKey,StoragePath(identifier: "/\(storeKey)")!)
                         self.saveField(key: storeKey, value: zones[z]!)
                     }else{
                         self.updateField(key: storeKey, value: zones[z]!)
@@ -90,7 +90,7 @@ access(all) contract GameContent {
                 }
             }else{
                 if self.contentPaths[key] == nil {
-                    self.addKey(key,StoragePath(identifier: "/".concat(key))!)
+                    self.addKey(key,StoragePath(identifier: "/\(key)")!)
                     self.saveField(key: key, value: value)
                 }else{
                     self.updateField(key: key, value: value)
@@ -101,22 +101,22 @@ access(all) contract GameContent {
     }
 
     access(contract) fun saveField(key:String,value:{String:AnyStruct}) {
-        let path = self.contentPaths[key] ?? panic("Missing content: ".concat(key))
+        let path = self.contentPaths[key] ?? panic("Missing content: \(key)")
         self.account.storage.save(value,to:path)
     }
 
     access(account) fun updateField(key:String,value:{String:AnyStruct}) {
-        let path = self.contentPaths[key] ?? panic("Missing content: ".concat(key))
+        let path = self.contentPaths[key] ?? panic("Missing content: \(key)")
         let _ = self.account.storage.load<{String:AnyStruct}>(from:path) // obsolete
         self.account.storage.save(value,to:path)
     }
 
     access(all) view fun getContent(key:String):&{String:AnyStruct} {
-        return self.account.storage.borrow<&{String:AnyStruct}>(from: self.contentPaths[key]!) ?? panic("getContent anomaly!".concat(key))
+        return self.account.storage.borrow<&{String:AnyStruct}>(from: self.contentPaths[key]!) ?? panic("getContent anomaly! \(key)")
     }
 
     access(all) view fun getZoneContent(key:String,zone:Int):&{String:AnyStruct} {
-        let storeKey = key.concat("_").concat(zone.toString())
+        let storeKey =  "\(key)_\(zone.toString())"
         return self.getContent(key: storeKey)
     }
 

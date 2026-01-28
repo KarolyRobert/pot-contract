@@ -13,13 +13,6 @@
 				"testing": "0000000000000007"
 			}
 		},
-		"DailyNeeds": {
-			"source": "cadence/contracts/market/DailyNeeds.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"Exchange": "cadence/contracts/Exchange.cdc",
 		"GameContent": {
 			"source": "cadence/contracts/GameContent.cdc",
 			"aliases": {
@@ -32,13 +25,16 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"GameMarket": "cadence/contracts/GameMarket.cdc",
 		"GameNFT": {
 			"source": "cadence/contracts/GameNFT.cdc",
 			"aliases": {
 				"testing": "0000000000000007"
 			}
 		},
+		"GameNPC": "cadence/contracts/GameNPC.cdc",
 		"GameToken": "cadence/contracts/GameToken.cdc",
+		"GameIdentity": "cadence/contracts/GameIdentity.cdc",
 		"Meta": {
 			"source": "cadence/contracts/utils/Meta.cdc",
 			"aliases": {
@@ -85,6 +81,15 @@
 				"emulator": "f8d6e0586b0a20c7",
 				"mainnet": "f233dcee88fe0abe",
 				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"FlowToken": {
+			"source": "mainnet://1654653399040a61.FlowToken",
+			"hash": "f82389e2412624ffa439836b00b42e6605b0c00802a4e485bc95b8930a7eac38",
+			"aliases": {
+				"emulator": "0ae53cb6e3f42a79",
+				"mainnet": "1654653399040a61",
+				"testnet": "7e60df042a9c0868"
 			}
 		},
 		"FungibleToken": {
@@ -157,7 +162,7 @@
 			}
 		},
 		"roger-admin": {
-			"address": "7faa51f4f97bddfa",
+			"address": "621c808b9a442d0a",
 			"key": {
 				"type": "file",
 				"location": "roger-admin.pkey"
@@ -179,7 +184,9 @@
 				"GameManager",
 				"GameContent",
 				"GameToken",
-				"Exchange",
+				"GameNPC",
+				"GameMarket",
+				"GameIdentity",
 				"Chest",
 				"Avatar",
 				"Upgrade",
@@ -198,7 +205,9 @@
 				"GameManager",
 				"GameContent",
 				"GameToken",
-				"Exchange",
+				"GameNPC",
+				"GameMarket",
+				"GameIdentity",
 				"Chest",
 				"Avatar",
 				"Upgrade",

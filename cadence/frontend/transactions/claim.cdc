@@ -1,16 +1,21 @@
 import "GameManager"
 import "GameNFT"
 import "GameToken"
+import "GameMarket"
 import "Random"
+import "GameIdentity"
 
 transaction(chests:[String]) {
 
-    let manager: auth (GameManager.Mint) &GameManager.Manager
+    let manager: auth (GameManager.Mint,GameManager.Gamer) &GameManager.Manager
     let collection:&GameNFT.Collection
     let winner:Address
 
     prepare(user: auth (BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue ) &Account, admin: auth (Storage, BorrowValue ) &Account) {
        
+        self.manager = admin.storage.borrow< auth (GameManager.Mint,GameManager.Gamer) &GameManager.Manager>(from:/storage/Manager) ?? panic("Only the owner can call this function")
+        self.winner = user.address
+
         if let collection = user.capabilities.borrow<&GameNFT.Collection>(GameNFT.CollectionPublicPath) {
             self.collection = collection
         }else{
@@ -29,11 +34,20 @@ transaction(chests:[String]) {
             let receiptCap = user.capabilities.storage.issue<&Random.ReceiptStore>(Random.ReceiptStoragePath)
             user.capabilities.publish(receiptCap, at: Random.ReceiptPublicPath)
 
+            let market <- GameMarket.createEmptyMarket()
+            user.storage.save(<- market, to: GameMarket.MarketStoragePath)
+            let marketCap = user.capabilities.storage.issue<&GameMarket.ListingCollection>(GameMarket.MarketStoragePath)
+            user.capabilities.publish(marketCap, at: GameMarket.MarketPublicPath)
+
+            let gamer <- self.manager.createGamer()
+            user.storage.save(<- gamer, to:GameIdentity.GamerStoragePath)
+            let gamerCap = user.capabilities.storage.issue<&GameIdentity.Gamer>(GameIdentity.GamerStoragePath)
+            user.capabilities.publish(gamerCap, at: GameIdentity.GamerPublicPath)
+
             self.collection = user.capabilities.borrow<&GameNFT.Collection>(GameNFT.CollectionPublicPath)!
         }
   
-        self.manager = admin.storage.borrow< auth (GameManager.Mint) &GameManager.Manager>(from:/storage/Manager) ?? panic("Only the owner can call this function")
-        self.winner = user.address
+       
     }
 
     execute {

@@ -3,10 +3,10 @@ import "GameNFT"
 import "GameToken"
 import "FungibleToken"
 import "NonFungibleToken"
-import "Exchange"
+import "GameNPC"
 
 
-transaction(epoch:UInt64,buy:[UInt8],sell:[UInt64]) {
+transaction(epoch:UInt64,buy:[UInt8],sell:[UInt64],pack:[UInt64]) {
 
     prepare(user: auth (BorrowValue) &Account) {
 
@@ -15,23 +15,25 @@ transaction(epoch:UInt64,buy:[UInt8],sell:[UInt64]) {
      
         let consts = GameContent.getConsts()
         let time = getCurrentBlock().timestamp
-        let npc = Exchange.getNPC(epoch:epoch,time:UInt64(time))
+        let npc = GameNPC.getNPC(epoch:epoch,time:UInt64(time))
 
         if npc != nil {
             let fabatka = GameContent.getConsts()["fabatka"] as! &{String:AnyStruct}
-            let sellPrice = Exchange.getSellPrice(npc:npc!,buy:buy,fabatka:fabatka) // mennyibe kerül
+            var sellPrice = GameNPC.getSellPrice(npc:npc!,buy:buy,fabatka:fabatka) // mennyibe kerül
+
+           
 
             let sellArray:@[GameNFT.MetaNFT] <- []
-            let sellGoods:[Exchange.SellGood] = []
+            let sellGoods:[GameNPC.SellGood] = []
             while sell.length > 0 {
                 let sellId = sell.removeFirst()
                 let sellNFT <- collection.withdraw(withdrawID: sellId) as! @GameNFT.MetaNFT
                 let meta = sellNFT.getMeta()
                 let category = sellNFT.category
-                sellGoods.append(Exchange.SellGood(category:category,meta:meta))
+                sellGoods.append(GameNPC.SellGood(category:category,meta:meta))
                 sellArray.append(<-sellNFT)
             }
-            let buyPrice = Exchange.getBuyPrice(npc: npc!, sell: sellGoods, fabatka: fabatka)
+            let buyPrice = GameNPC.getBuyPrice(npc: npc!, sell: sellGoods, fabatka: fabatka)
 
             let price <- GameToken.createEmptyVault(vaultType:Type<@GameToken.Fabatka>()) as! @GameToken.Fabatka
             if sellPrice > buyPrice {
@@ -39,7 +41,7 @@ transaction(epoch:UInt64,buy:[UInt8],sell:[UInt64]) {
                 let amount <- vault.withdraw(amount: allPrice) as! @GameToken.Fabatka
                 price.deposit(from: <- amount)
             }
-            let goods <- Exchange.exchange(epoch: epoch, buy: buy, sell: <- sellArray, price: <- price)
+            let goods <- GameNPC.exchange(epoch: epoch, buy: buy, sell: <- sellArray, price: <- price)
 
             while goods.length > 0 {
                 let res <- goods.removeFirst()
@@ -52,6 +54,19 @@ transaction(epoch:UInt64,buy:[UInt8],sell:[UInt64]) {
                 }
             }
             destroy goods
+            if pack.length > 0 {
+                let packPrice = GameNPC.getPackPrice(npc: npc!)
+                let price <- vault.withdraw(amount: packPrice) as! @GameToken.Fabatka
+
+                let packArray:@[{GameNFT.INFT}] <- []
+                while pack.length > 0 {
+                    let packID = pack.removeFirst()
+                    let nft <- collection.withdraw(withdrawID: packID) as! @{GameNFT.INFT}
+                    packArray.append(<-nft)
+                }
+                let packNFT <- GameNPC.packing(epoch: epoch, packed: <- packArray, price: <- price)
+                 collection.deposit(token: <- packNFT)
+            }
 
         }else{
             panic("Epoch expired!")

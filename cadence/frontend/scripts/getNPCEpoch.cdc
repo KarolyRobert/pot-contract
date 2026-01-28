@@ -1,8 +1,8 @@
 
-import "Exchange"
+import "GameNPC"
 
 access(all) fun main(): {String:AnyStruct} {
-    return Exchange.currentEpoch!.getData()
+    return GameNPC.currentEpoch!.getData()
 }
 
 

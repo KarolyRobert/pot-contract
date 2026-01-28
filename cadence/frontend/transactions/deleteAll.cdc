@@ -1,5 +1,7 @@
 import "GameNFT"
 import "GameToken"
+import "GameIdentity"
+import "GameMarket"
 import "Random"
 
 
@@ -25,7 +27,18 @@ transaction() {
             if let rec <- user.storage.load<@Random.ReceiptStore>(from: Random.ReceiptStoragePath) {
                 destroy rec
             }
+
+            let marCap = user.capabilities.unpublish(GameMarket.MarketPublicPath)
+
+            if let marc <- user.storage.load<@GameMarket.ListingCollection>(from: GameMarket.MarketStoragePath) {
+                destroy marc
+            }
           
+            let gamerCap = user.capabilities.unpublish(GameIdentity.GamerPublicPath)
+
+            if let gamer <- user.storage.load<@GameIdentity.Gamer>(from: GameIdentity.GamerStoragePath) {
+                destroy gamer
+            }
             
 
     }

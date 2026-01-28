@@ -12,7 +12,8 @@ transaction() {
 
        // let request <-receipt.popRequest()
        // destroy request
-        let loot <- Upgrade.revealUpgrade(receipt: <-receipt)
+        let loot <- receipt.reveal()
+        destroy receipt
 
         while loot.length > 0 {
             let token <- loot.removeFirst()

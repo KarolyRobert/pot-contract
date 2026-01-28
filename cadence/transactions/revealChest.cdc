@@ -11,8 +11,8 @@ transaction() {
     prepare(signer: auth(BorrowValue, LoadValue) &Account) {
         // Load my receipt from storage
         let receipt <- signer.storage.load<@Chest.Receipt>(from:Random.ReceiptStoragePath) ?? panic("No Receipt found in storage at path=".concat(Random.ReceiptStoragePath.toString()))
-        let loot <- Chest.reveilChest(receipt: <-receipt)
-
+        let loot <- receipt.reveal()
+        destroy receipt
         let collection = signer.capabilities.borrow<&GameNFT.Collection>(GameNFT.CollectionPublicPath) ?? panic("Nincs collection")
         let vault = signer.capabilities.borrow<&GameToken.Fabatka>(GameToken.VaultPublicPath) ?? panic("Nincs collection")
 
