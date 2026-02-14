@@ -62,22 +62,38 @@ transaction(chests:[String]) {
                 return result
             }
             let parts = chest.split(separator: "|")
-            return {
+
+            let chestMeta:{String:AnyStruct} = {
+                "level":toInt(parts[3]),
+                "wLevel":toInt(parts[4]),
+                "event":parts[5],
+                "class":parts[6]
+            }
+
+            let chestData:{String:AnyStruct} = {
                 "type":parts[0],
                 "gameId":parts[1],
-                "hash":parts[2],
-                "meta":{
-                    "level":toInt(parts[3]),
-                    "wLevel":toInt(parts[4]),
-                    "event":parts[5],
-                    "class":parts[6]
-                }
+                "hash":parts[2]
             }
+            if parts.length == 12 {
+                let charm:{String:AnyStruct} = {
+                    "category":parts[7],
+                    "type":parts[8],
+                    "level":toInt(parts[9]),
+                    "quality":parts[10],
+                    "zone":toInt(parts[11])
+                }
+                chestMeta["charm"] = charm
+            }
+            chestData["meta"] = chestMeta
+
+            return chestData
         }
         for cString in chests {
             let chest = toChest(cString)
             let chestRes <- self.manager.createChest(
                 winner:self.winner,
+                defeated:self.winner, // A vesztes címére cserélni
                 type:chest["type"] as! String,
                 gameId:chest["gameId"] as! String,
                 hash:chest["hash"] as! String,

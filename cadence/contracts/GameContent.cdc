@@ -4,9 +4,7 @@ access(all) contract GameContent {
 
 
     access(account) var eventName:String
-    access(all) let zoneSize:Int
-   
-
+  
     access(all) var currentVersion:Version
     access(all) let contentPaths: {String:StoragePath}
 
@@ -124,8 +122,8 @@ access(all) contract GameContent {
         return self.getContent(key:"events")[self.eventName] as! &{String:AnyStruct}
     }
 
-    access(all) view fun getConsts():&{String:{String:AnyStruct}} {
-        return self.getContent(key:"consts")["consts"] as! &{String:{String:AnyStruct}}
+    access(all) view fun getConsts():&{String:AnyStruct} {
+        return self.getContent(key:"consts")["consts"] as! &{String:AnyStruct}
     }
 
     access(account) fun setEvent(_ name:String){
@@ -136,7 +134,6 @@ access(all) contract GameContent {
     init() {
         self.contentPaths = {}
         self.eventName = "default"
-        self.zoneSize = 12
         self.currentVersion = Version(content:[],audit:[])
         let versions <- create OldVersions()
         self.account.storage.save(<- versions, to: /storage/Versions)

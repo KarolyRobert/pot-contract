@@ -3,6 +3,7 @@ import "GameNFT"
 import "GameToken"
 import "FungibleToken"
 import "NonFungibleToken"
+import "GameIdentity"
 import "GameNPC"
 
 
@@ -12,6 +13,7 @@ transaction(epoch:UInt64,buy:[UInt8],sell:[UInt64],pack:[UInt64]) {
 
         let collection = user.storage.borrow<auth (NonFungibleToken.Withdraw)  &GameNFT.Collection>(from:GameNFT.CollectionStoragePath) ?? panic("Collection")
         let vault = user.storage.borrow<auth (FungibleToken.Withdraw) &GameToken.Fabatka>(from: GameToken.VaultStoragePath) ?? panic("vault")
+        let gamer = user.storage.borrow<auth (GameIdentity.NPC) &GameIdentity.Gamer>(from: GameIdentity.GamerStoragePath) ?? panic("gamer")
      
         let consts = GameContent.getConsts()
         let time = getCurrentBlock().timestamp
@@ -20,8 +22,6 @@ transaction(epoch:UInt64,buy:[UInt8],sell:[UInt64],pack:[UInt64]) {
         if npc != nil {
             let fabatka = GameContent.getConsts()["fabatka"] as! &{String:AnyStruct}
             var sellPrice = GameNPC.getSellPrice(npc:npc!,buy:buy,fabatka:fabatka) // mennyibe kerül
-
-           
 
             let sellArray:@[GameNFT.MetaNFT] <- []
             let sellGoods:[GameNPC.SellGood] = []
@@ -41,7 +41,7 @@ transaction(epoch:UInt64,buy:[UInt8],sell:[UInt64],pack:[UInt64]) {
                 let amount <- vault.withdraw(amount: allPrice) as! @GameToken.Fabatka
                 price.deposit(from: <- amount)
             }
-            let goods <- GameNPC.exchange(epoch: epoch, buy: buy, sell: <- sellArray, price: <- price)
+            let goods <- GameNPC.exchange(epoch: epoch, buy: buy, sell: <- sellArray, price: <- price,gamer:gamer)
 
             while goods.length > 0 {
                 let res <- goods.removeFirst()
@@ -64,7 +64,7 @@ transaction(epoch:UInt64,buy:[UInt8],sell:[UInt64],pack:[UInt64]) {
                     let nft <- collection.withdraw(withdrawID: packID) as! @{GameNFT.INFT}
                     packArray.append(<-nft)
                 }
-                let packNFT <- GameNPC.packing(epoch: epoch, packed: <- packArray, price: <- price)
+                let packNFT <- GameNPC.packing(epoch: epoch, packed: <- packArray, price: <- price,gamer: gamer)
                  collection.deposit(token: <- packNFT)
             }
 

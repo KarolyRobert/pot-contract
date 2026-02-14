@@ -5,6 +5,7 @@ import "Random"
 import "RandomConsumer"
 import "Utils"
 import "Burner"
+import "GameIdentity"
 
 
 access(all) contract Avatar {
@@ -46,6 +47,9 @@ access(all) contract Avatar {
 
         access(contract) fun resolve():@RandomConsumer.RevealOutcome {
 
+            let owner = self.owner ?? panic("Receipt must be in storage for reveal")
+            let gamer = owner.capabilities.borrow<&GameIdentity.Gamer>(GameIdentity.GamerPublicPath) ?? panic("Missing Seller Identity!")
+         
             let result:@[AnyResource] <- []
             let avatar <- self.getAvatar()
             let avatarID = avatar.id
@@ -73,7 +77,11 @@ access(all) contract Avatar {
                         validation = "valid"
                         let chance = Utils.getCompozitChance(main: main, seconder: seconder, category:"avatar", Event:currentEvent, Consts: consts)//self.chance(main: main, seconder: seconder, mul: growMuls["avatar"]!)
                         if chance > rng.random() {
+                            gamer.setCraft(success: true)
                             avatarMeta["level"] = main + 1
+                        }else {
+                            gamer.setCraft(success: false)
+                            avatarMeta["fate"] = (avatarMeta["fate"] as! Int) + 1
                         }
                     }else{
                         validation = "error"
@@ -138,7 +146,10 @@ access(all) contract Avatar {
                             let seconder = alevel > slevel ? slevel : alevel
                             let chance = Utils.getCompozitChance(main: main, seconder: seconder, category:"skill", Event:currentEvent, Consts: consts)
                             if chance > rng.random() {
+                                gamer.setCraft(success: true)
                                 avatarSkills[i]["level"] = main + 1
+                            }else{
+                                gamer.setCraft(success: false)
                             }
                         }
                         i = i + 1
@@ -152,9 +163,10 @@ access(all) contract Avatar {
             }
 
             let emitResult:[UInt64] = []
-            let success:Bool = validation == "valid"
+            let successResolve:Bool = validation == "valid"
             var resultToken:UFix64 = 0.0
-            if success {
+            if successResolve {
+                gamer.setBurn(burnToken: needPrice, burnNFT: 1)
                 avatar.meta.update(avatarMeta)
                 emitResult.append(avatar.id)
                 result.append(<-avatar)
@@ -168,14 +180,12 @@ access(all) contract Avatar {
                 resultToken = price.balance
                 result.append(<-price)
             }
-           // receipt.emitReveal(success:success, result:emitResult,token:resultToken)
-           
-            return <- RandomConsumer.createOutcome(success:success,ids:emitResult,balance:resultToken,result: <- result)
+            
+            return <- RandomConsumer.createOutcome(success:successResolve,ids:emitResult,balance:resultToken,result: <- result)
         }
 
         
         init(avatar: @{GameNFT.INFT},sacrifice:@{GameNFT.INFT},options:[Int],price:@GameToken.Fabatka,request: @RandomConsumer.Request) {
-           // self.id = avatar.id
             self.avatar <- avatar
             self.sacrifice <- sacrifice
             self.options = options

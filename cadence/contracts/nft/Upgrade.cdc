@@ -6,6 +6,7 @@ import "Random"
 import "Utils"
 import "RandomConsumer"
 import "Burner"
+import "GameIdentity"
 
 
 access(all) contract Upgrade {
@@ -102,6 +103,9 @@ access(all) contract Upgrade {
                 return result
             }
 
+            let owner = self.owner ?? panic("Must have Collection in storage!")
+            let gamer = owner.capabilities.borrow<&GameIdentity.Gamer>(GameIdentity.GamerPublicPath) ?? panic("Missing Seller Identity!")
+            var burnNFT = 0
             
             let result:@[AnyResource] <- []
             let resultIDs:[UInt64] = []
@@ -110,6 +114,7 @@ access(all) contract Upgrade {
             let temp:@[{GameNFT.INFT}] <- []
             var uniqType:String = "empty"
             if let uniqNFT <- self.getUniq() {
+                burnNFT = burnNFT + 1
                 uniqType = uniqNFT.type
                 temp.append(<-uniqNFT)
             }
@@ -121,7 +126,8 @@ access(all) contract Upgrade {
             var nftMeta = nft.meta.build()
 
             let needs <- self.getNeeds()
-           
+
+            burnNFT = burnNFT + needs.length
 
             // uniq validation
             var validation = validateUniq(type:uniqType,length:needs.length)
@@ -149,15 +155,20 @@ access(all) contract Upgrade {
             let consts = GameContent.getConsts()
             let quality = nftMeta["quality"] as! String
             let nftLevel = nftMeta["level"] as! Int
-            //let needPrice = Utils.getPrice(category:nft.category, level: nftLevel, quality: quality, Consts: consts)
+            let fate = nftMeta["fate"] as! Int
             let needPrice = Utils.getUpgradePrice(category:nft.category,meta:nftMeta,Consts:consts)
 
             if needPrice != price.balance {
                 validation = "error"
             }
 
+            if fate == 0 {
+                validation = "error"
+            }
+
             // destination
             if validation == "valid" {
+                gamer.setBurn(burnToken: needPrice, burnNFT: burnNFT)
                 let currentEvent = GameContent.getCurrentEvent()
                 let chance = Utils.getGrowChance(level:nftMeta["level"] as! Int,category:nft.category,Event:currentEvent,Consts:consts)
             
@@ -168,6 +179,7 @@ access(all) contract Upgrade {
                 let needNames = *(GameContent.getZoneContent(key:needType, zone: zone).keys)
 
                 if chance > rng.random() { // level up , change aids os alcs
+                    gamer.setCraft(success: true)
                     // level up
                     nftMeta["level"] = nftLevel + 1
                     // scroll needs
@@ -179,11 +191,15 @@ access(all) contract Upgrade {
                     resultIDs.append(nft.id)
                     result.append(<- nft)
                 }else{ // unsuccess
+                    gamer.setCraft(success: false)
                     if uniqType == "gift" || uniqType == "trogaris" {
                         //scroll needs
                         let needCount = Utils.getNeedCount(base: baseNeedCount, level: nftLevel, category: nft.category, Consts: consts)//self.getNeedCount(base: baseNeedCount, category: nft.category, level:nftLevel)
                         let newNeeds = Utils.chooseMore(needNames,rng.intArray(length:needCount,max:needNames.length))
+
+
                         nftMeta["needs"] = newNeeds
+                        nftMeta["fate"] = (nftMeta["fate"] as! Int) - 1
                         nft.meta.update(nftMeta)
                         resultIDs.append(nft.id)
                         result.append(<-nft)
@@ -191,6 +207,7 @@ access(all) contract Upgrade {
 
                         let newNeedCount = Utils.getNeedCount(base: baseNeedCount, level: nftLevel, category: nft.category, Consts: consts) // self.getNeedCount(base: baseNeedCount, category: nft.category, level:nftLevel)
                         let salvage <- MintSalvage.salvage(category: nft.category, zone: zone, count: newNeedCount, currentEvent: currentEvent, rng:rng.nextRNG())
+                        gamer.setLoot(lootToken: 0.0, lootNFT: salvage.length)
                         while salvage.length > 0 {
                             let salv <-salvage.removeFirst()
                             resultIDs.append(salv.id)

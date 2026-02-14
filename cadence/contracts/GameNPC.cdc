@@ -5,6 +5,7 @@ import "Burner"
 import "Xorshift128plus"
 import "Random"
 import "Utils"
+import "GameIdentity"
 
 
 access(all) contract GameNPC {
@@ -102,8 +103,6 @@ access(all) contract GameNPC {
         return result
     }
 
-
-
     access(all) view fun getNPC(epoch:UInt64,time:UInt64):NPC? {
         var state:EpochState? = nil
         if self.currentEpoch != nil && self.currentEpoch!.id == epoch {
@@ -119,24 +118,9 @@ access(all) contract GameNPC {
         return nil
     }
 
-    access(self) view fun isAccepted(npc:NPC,category:String):Bool {
+    access(self) view fun isAccepted(npc:NPC,roleName:String,category:String):Bool {
         var result = false
-        let trade = npc.meta["trade"] as! {String:AnyStruct}
-        let pool = trade["accept"] as! [String]
-        var index = 0
-        while pool.length > index {
-            if pool[index] == category {
-                result = true
-                break
-            }
-            index = index + 1
-        }
-        return result
-    }
-
-    access(self) view fun isAccepted_(npc:NPC,type:String,category:String):Bool {
-        var result = false
-        let role = npc.meta[type] as! {String:AnyStruct}
+        let role = npc.meta[roleName] as! {String:AnyStruct}
         let pool = role["accept"] as! [String]
         var index = 0
         while pool.length > index {
@@ -164,6 +148,7 @@ access(all) contract GameNPC {
         let zoneExpCache:{Int:UFix64} = {}
         let levelExpCache:{Int:UFix64} = {}
         let qualityExpCache:{Int:UFix64} = {}
+
         let getExp = fun (type:String,exp:Int):UFix64 {
             switch(type){
                 case "zone":
@@ -178,7 +163,7 @@ access(all) contract GameNPC {
                     if let result = levelExpCache[exp] {
                         return result
                     }else{
-                        let result = Utils.pow(base:zoneMul,exp:exp)
+                        let result = Utils.pow(base:levelMul,exp:exp)
                         levelExpCache[exp] = result
                         return result
                     }
@@ -186,7 +171,7 @@ access(all) contract GameNPC {
                     if let result = qualityExpCache[exp] {
                         return result
                     }else{
-                        let result = Utils.pow(base:zoneMul,exp:exp)
+                        let result = Utils.pow(base:qualityMul,exp:exp)
                         qualityExpCache[exp] = result
                         return result
                     }
@@ -196,11 +181,11 @@ access(all) contract GameNPC {
 
         while sell.length > index {
             let sellGod = sell[index]
-            if self.isAccepted(npc: npc, category: sellGod.category) {
+            if self.isAccepted(npc: npc, roleName:"trade",category: sellGod.category) {
                 let qualityIndex = Utils.getQualityIndex(sellGod.quality)
                 let zoneExp = getExp(type:"zone",exp:sellGod.zone)
-                let levelExp = getExp(type:"level",exp:sellGod.zone)
-                let qualityExp = getExp(type:"quality",exp:sellGod.zone)
+                let levelExp = getExp(type:"level",exp:sellGod.level)
+                let qualityExp = getExp(type:"quality",exp:qualityIndex)
                 let price = base * zoneExp * levelExp * qualityExp * buyLevel
                 result = result + price
             }else {
@@ -216,7 +201,7 @@ access(all) contract GameNPC {
         return pack["price"] as! UFix64
     }
 
-    access(all) fun exchange(epoch:UInt64,buy:[UInt8],sell:@[GameNFT.MetaNFT],price:@GameToken.Fabatka):@[AnyResource] {
+    access(all) fun exchange(epoch:UInt64,buy:[UInt8],sell:@[GameNFT.MetaNFT],price:@GameToken.Fabatka,gamer: auth(GameIdentity.NPC) &GameIdentity.Gamer):@[AnyResource] {
         let time = UInt64(getCurrentBlock().timestamp)
         let npc = self.getNPC(epoch:epoch,time:time)
         
@@ -236,6 +221,9 @@ access(all) contract GameNPC {
 
             let buyPrice = self.getBuyPrice(npc: npc!, sell: sellGoods, fabatka: fabatka) // mennyit ér
 
+            gamer.setLoot(lootToken:buyPrice,lootNFT:buy.length)
+            gamer.setBurn(burnToken:sellPrice,burnNFT:sellGoods.length)
+
             let pay:Fix64 = Fix64(sellPrice) - Fix64(buyPrice) // fizetendő
             let result:@[AnyResource] <- []
             let nfts:[UInt64] = []
@@ -254,6 +242,7 @@ access(all) contract GameNPC {
                         nfts.append(nft.id)
                         result.append(<- nft)
                     }
+
                 }else {
                     panic("Invalid price!")
                 }
@@ -293,14 +282,16 @@ access(all) contract GameNPC {
         panic("Invalid epoch!")
     }
 
-    access(all) fun packing(epoch:UInt64,packed:@[{GameNFT.INFT}],price:@GameToken.Fabatka):@GameNFT.PackNFT {
+    access(all) fun packing(epoch:UInt64,packed:@[{GameNFT.INFT}],price:@GameToken.Fabatka,gamer: auth(GameIdentity.NPC) &GameIdentity.Gamer):@GameNFT.PackNFT {
         let time = UInt64(getCurrentBlock().timestamp)
         let npc = self.getNPC(epoch:epoch,time:time)
-       
+
+        
         if(npc != nil){
             let packingPrice = self.getPackPrice(npc:npc!)
             let pack = npc!.meta["pack"] as! {String:AnyStruct}
-            let maxCount = pack["maxCount"] as! Int 
+            let maxCount = pack["maxCount"] as! Int
+            gamer.setBurn(burnToken:packingPrice,burnNFT:0)
             if packed.length > maxCount && packingPrice == price.balance {
                 panic("Pack to big!")
             }else{
@@ -308,7 +299,7 @@ access(all) contract GameNPC {
                 let packing:@{UInt64:{GameNFT.INFT}} <- {}
                 while packed.length > 0 {
                     let nft <- packed.removeFirst()
-                    if self.isAccepted_(npc:npc!,type:"pack",category:nft.category){
+                    if self.isAccepted(npc:npc!,roleName:"pack",category:nft.category){
                         packedIDs.append(nft.id)
                         packing[nft.id] <-! nft
                     }else{

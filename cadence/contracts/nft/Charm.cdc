@@ -5,13 +5,13 @@ import "Random"
 import "Utils"
 import "RandomConsumer"
 import "Burner"
+import "GameIdentity"
 
 
 access(all) contract Charm {
 
     access(all) event CharmCommit(nftID:UInt64, commitBlock: UInt64, receiptID: UInt64)
-   // access(all) event CharmReveal(charmID:UInt64, commitBlock: UInt64, receiptID: UInt64)
-
+ 
     access(all) resource Receipt : RandomConsumer.RequestWrapper {
 
         access(all) var request: @RandomConsumer.Request?
@@ -48,7 +48,10 @@ access(all) contract Charm {
         }
 
         access(contract) fun resolve():@RandomConsumer.RevealOutcome {
-           
+            
+            let owner = self.owner ?? panic("Must have Collection in storage!")
+            let gamer = owner.capabilities.borrow<&GameIdentity.Gamer>(GameIdentity.GamerPublicPath) ?? panic("Missing Seller Identity!")
+            var burnNFT = 0
 
             var validation = "invalid"
             let result:@[AnyResource] <- []
@@ -61,8 +64,11 @@ access(all) contract Charm {
             if let uniqNFT <- self.getTharion() {
                 if uniqNFT.type != "tharion" || (uniqNFT.type == "tharion" && needs.length > 0) {
                     validation = "error"
+                }else{
+                    validation = "valid"
                 }
                 tharion = true
+                burnNFT = burnNFT + 1
                 temp.append(<-uniqNFT)
             }
 
@@ -86,6 +92,7 @@ access(all) contract Charm {
                     let talentumCount = needs.length
                     if talentumCount == needCount {
                         validation = "valid"
+                        burnNFT = burnNFT + talentumCount
                         var i = 0
                         while i < talentumCount {
                             if needs[i].type != "talentum" {
@@ -103,10 +110,13 @@ access(all) contract Charm {
                     let chance = Utils.getGrowChance(level: level, category:"charm", Event: currentEvent, Consts: consts)
                     
                     if chance > rng.random() {
+                        gamer.setCraft(success: true)
                         let newNeedCount = Utils.getNeedCount(base: baseNeedCount, level: level + 1, category: "charm", Consts: consts)
                         charmMeta["level"] = level + 1
                         charmMeta["needs"] = newNeedCount
                         charm.meta.update(charmMeta)
+                    }else{
+                        gamer.setCraft(success: false)
                     }
                 }
 
@@ -117,6 +127,7 @@ access(all) contract Charm {
             var resultToken:UFix64 = 0.0
 
             if validation == "valid" {
+                gamer.setBurn(burnToken: needPrice, burnNFT: burnNFT)
                 emitResult.append(charm.id)
                 result.append(<- charm)
                 destroy temp

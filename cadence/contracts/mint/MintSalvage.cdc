@@ -11,8 +11,8 @@ access(all) contract MintSalvage {
         let result:@[{GameNFT.INFT}] <- []
 
         let charmChance = *(currentEvent["charmChance"] as! &UFix64)
-        let lootMul = *(currentEvent["lootMul"] as! &UFix64)
-        var lootCount = Int(UFix64(count) * lootMul)
+       
+        var lootCount = count
 
         let contentKey = category == "item" ? "items" : "spells"
         var quality = "rare"

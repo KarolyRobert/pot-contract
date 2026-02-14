@@ -4,16 +4,10 @@ import "Random"
 import "RandomConsumer"
 import "Utils"
 import "GameToken"
+import "GameIdentity"
 
 
 access(all) contract Chest {
-
-    access(all) let difBonus:Fix64
-    access(all) let lootCount:UFix64
-
-   // access(all) event ChestCommit(chestID:UInt64, commitBlock: UInt64, receiptID: UInt64)
-
-   // access(all) event ChestReveal(chestID:UInt64, loot:[UInt64],fabatka:UFix64, commitBlock: UInt64, receiptID: UInt64)
 
     access(all) resource Receipt : RandomConsumer.RequestWrapper {
         access(all) let id:UInt64
@@ -57,8 +51,9 @@ access(all) contract Chest {
                 return result
             }
 
-            view fun modifyChance(array:[UFix64],dif:Int):[UFix64]{
-                let base:Fix64 = (Fix64(dif) * Chest.difBonus)
+            view fun modifyChance(array:[UFix64],dif:Int,chestEvent:&{String:AnyStruct}):[UFix64]{
+                let difMul = *(chestEvent["difMul"] as! &UFix64)
+                let base:Fix64 = (Fix64(dif) * Fix64(difMul))
                 let main = Fix64(array[0]) + base < 0.0 ? 0.0 : UFix64(Fix64(array[0]) + base)        
                 let seconder = Fix64(array[1]) + (base/2.0) < 0.0 ? 0.0 : UFix64(Fix64(array[1]) + (base/2.0))
                 let aid = UFix64(Fix64(array[2]) + (Fix64(array[0]) - Fix64(main)) + (Fix64(array[1]) - Fix64(seconder)))
@@ -69,22 +64,36 @@ access(all) contract Chest {
                     aid / sum
                 ]
             }
-           
 
-            let rng = Random.getRNG(request: <-self.popRequest())
-            let content:{String:&{String:AnyStruct}} = {} //computeUnitsUsed=797 memoryEstimate=20191064  computeUnitsUsed=730 memoryEstimate=19597727
-            let result:@[AnyResource] <- []
-        
-        
-            let chest <- self.getChest()
-            let chestId = chest.id
-            let chestMeta = chest.meta.build()
-            let chestLevel = chestMeta["level"] as! Int
-            let wLevel = chestMeta["wLevel"] as! Int
-            let chestClass = chestMeta["class"] as! String
-            let dif = chestLevel - wLevel
-            let zone = chestLevel / GameContent.zoneSize
-
+            /*
+                 The charm impact on category = level%.  
+             */
+            view fun applyCharm(chestCharm:{String:AnyStruct}?,lootChance:[UFix64],lootType:[String]):[UFix64] {
+                if let charm = chestCharm {
+                    let category = charm["category"] as! String
+                    let bonus = Fix64(charm["level"] as! Int) / 100.0 // max 20% bonus
+                    var main = Fix64(lootChance[0])
+                    var seconder = Fix64(lootChance[1])
+                    var need = Fix64(lootChance[2])
+                    if category == lootType[0] { // item or spell
+                        main = main + bonus
+                        seconder = seconder - (bonus / 2.0) < 0.0 ? 0.0 : seconder - (bonus / 2.0)
+                        need = need - (bonus / 2.0) < 0.0 ? 0.0 : need - (bonus / 2.0)
+                    }else{
+                        seconder = seconder + bonus
+                        main = main - (bonus / 2.0) < 0.0 ? 0.0 : main - (bonus / 2.0)
+                        need = need - (bonus / 2.0) < 0.0 ? 0.0 : need - (bonus / 2.0)
+                    }
+                    let sum = main + seconder + need
+                    return [
+                        UFix64(main / sum),
+                        UFix64(seconder / sum),
+                        UFix64(need / sum)
+                    ]
+                }
+                return lootChance
+            }
+            let content:{String:&{String:AnyStruct}} = {}
 
             let needContent = fun(_ need:[String],_ z:Int?){
                 if let zone = z {
@@ -101,6 +110,37 @@ access(all) contract Chest {
                     }
                 }
             }
+           
+            let owner = self.owner ?? panic("Receipt must be in storage for reveal")
+            let gamer = owner.capabilities.borrow<&GameIdentity.Gamer>(GameIdentity.GamerPublicPath) ?? panic("Missing Seller Identity!")
+
+            let rng = Random.getRNG(request: <-self.popRequest())
+          
+            let result:@[AnyResource] <- []        
+        
+
+            let chest <- self.getChest()
+            let chestId = chest.id
+            let chestMeta = chest.meta.build()
+            let chestLevel = chestMeta["level"] as! Int
+            let wLevel = chestMeta["wLevel"] as! Int
+            let chestClass = chestMeta["class"] as! String
+
+            /*
+            The charm bonus for category is precent of his level (max 20%),
+            the quality of item is multiply half of level (max 10x),
+            the multiply of item of spell in the same zone is half of level (max 10x)
+             */
+            var chestCharm:{String:AnyStruct}? = nil
+            if let charm = chestMeta["charm"] as? {String:AnyStruct} {
+                chestCharm = charm
+            }
+
+            let dif = chestLevel - wLevel
+           
+            needContent(["events","consts"],nil)
+            let zoneSize = (content["consts"]!["consts"] as! &{String:AnyStruct}["zoneSize"]) as! &Int
+            let zone = chestLevel / *zoneSize
 
             let mintItem = fun ():@{GameNFT.INFT}{
                 needContent(["items","aids"],zone)
@@ -108,38 +148,79 @@ access(all) contract Chest {
                 let byQuality:{String:[String]} = {}
                 let keys = items.keys
             
-                let QChance = ((content["consts"]!["consts"] as! &{String:{String:AnyStruct}})["qualityClass"]!)[chestClass]! as! &[UFix64]
+                let QChance = (content["consts"]!["consts"] as! &{String:AnyStruct}["qualityClass"] as! &{String:AnyStruct})[chestClass] as! &[UFix64]
+
+                var charmQuality = ""
+                var charmMultiply = 0
+                var charmItem = ""
+                if chestCharm != nil {
+                    charmQuality = chestCharm!["quality"] as! String
+                    charmMultiply = chestCharm!["level"] as! Int / 2
+                    if chestCharm!["category"] as! String == "item" && chestCharm!["zone"] as! Int == zone {
+                        charmItem = chestCharm!["type"] as! String
+                    }
+                }
+             
             
-                for key in keys {
+                for key in keys { // only the exist qualitys of zone
                     let item = items[key] as! &{String:AnyStruct}
                     let qualiyt = *(item["quality"] as! &String)
                     if byQuality[qualiyt] == nil {
                         byQuality[qualiyt] = []
                     }
-                    byQuality[qualiyt]!.append(key)
+                    if charmItem == key {
+                        var multiply = charmMultiply
+                        while multiply > 0 {
+                            multiply = multiply - 1
+                            byQuality[qualiyt]!.append(key)
+                        }
+                    }else{
+                        byQuality[qualiyt]!.append(key)
+                    }
                 }
-                let qualitys = byQuality.keys
+              
+                let qualityKeys = byQuality.keys
+                let qualitys:[String] = []
                 var qualityChance:[UFix64] = []
-                for key in qualitys {
+                for key in qualityKeys { // only the chance of qualitys
                     let index = Utils.getQualityIndex(key)
-                    qualityChance.append(QChance[index])
+                    if charmQuality == key { // multiply chance of quality
+                        var multiply = charmMultiply
+                        while multiply > 0 {
+                            multiply = multiply - 1
+                            qualitys.append(key)
+                            qualityChance.append(QChance[index])
+                        }
+                    }else{
+                        qualitys.append(key)
+                        qualityChance.append(QChance[index])
+                    }
                 }
+
                 qualityChance = normalize(qualityChance)
+
                 let qualityIndex = Utils.chooseIndex(qualityChance,rng.random())
+
                 let quality = qualitys[qualityIndex]
+
                 let types = byQuality[quality]!
+
+
+
                 let type = types[rng.nextInt(max: types.length)]
                 let chainItem = items[type] as! &{String:AnyStruct}
                 let itemClass = *(chainItem["class"] as! &String)
                 let useFor = *(chainItem["useFor"] as! &[String])
                 
-
-
                 // aids sorsolás
                 let aids = (content["aids"]!)
                 let aidNames = aids.keys
-                let aidCount = Utils.getQualityIndex(quality) + 1 
-                let needs = Utils.chooseMore(*aidNames,rng.intArray(length:aidCount,max:aidNames.length))
+                let quality_pos = Utils.getQualityIndex(quality) + 1
+
+                let fateBase = quality_pos * 100
+                let fate = fateBase + rng.nextInt(max: fateBase)
+                
+                let needs = Utils.chooseMore(*aidNames,rng.intArray(length:quality_pos,max:aidNames.length))
             
                 
                 return <- GameNFT.minter.mintMeta(
@@ -151,7 +232,8 @@ access(all) contract Chest {
                         "useFor":useFor,
                         "quality":quality,
                         "zone":zone,
-                        "needs":needs
+                        "needs":needs,
+                        "fate":fate
                     })
             }
 
@@ -175,9 +257,7 @@ access(all) contract Chest {
                 let skillPool = skilltypes.filter(view fun(element:String):Bool {
                     return validClass.contains(*(skills[element] as! &{String:AnyStruct}["class"] as! &String))
                 })
-                log(skillPool)
-                log(validClass)
-
+             
                 let skillNames:[String] = Utils.chooseSome(pool:skillPool,source:rng.descIntArray(length:4,max:skillPool.length))
 
                 let avatarSkills = skillNames.map(fun(name:String):{String:AnyStruct} {
@@ -217,7 +297,20 @@ access(all) contract Chest {
             let mintSpell = fun():@{GameNFT.INFT}{
                 needContent(["spells","alcs"],zone)
                 let spells = content["spells"]!
-                let types = spells.keys
+                let types = *spells.keys
+
+                if chestCharm != nil {
+                    if chestCharm!["category"] as! String == "spell" && chestCharm!["zone"] as! Int == zone {
+                        let charmSpell = chestCharm!["type"] as! String
+                        var multiply = (chestCharm!["level"] as! Int / 2) - 1
+                        while multiply > 0 {
+                            multiply = multiply - 1
+                            types.append(charmSpell)
+                        }
+                    }
+                }
+
+
                 let type = types[rng.nextInt(max: types.length)]
 
                 let alcNames = (content["alcs"]!).keys
@@ -229,6 +322,8 @@ access(all) contract Chest {
                     i = i + 1
                 }
 
+                let fate = rng.nextInt(max: 1000)
+
                 return <- GameNFT.minter.mintMeta(
                     category: "spell",
                     type:type,
@@ -236,7 +331,8 @@ access(all) contract Chest {
                         "level":0,
                         "quality":"rare",
                         "zone":zone,
-                        "needs":needs
+                        "needs":needs,
+                        "fate":fate
                     })
             }
 
@@ -260,19 +356,17 @@ access(all) contract Chest {
                 )
             }
                 
-            needContent(["events","consts"],nil)
+           
         
         
             let loot:[UInt64] = []
-
+            
+            // a ládára vonatkozó event objektum.
             let chestEvent = content["events"]![chestMeta["event"] as! String] as! &{String:AnyStruct}
-        // log(chestEvent)
+    
             var lootChance = *((content["consts"]!["consts"] as! &{String:AnyStruct}["loot"] as! &{String:[UFix64]})[*(chestEvent["lootChance"] as! &String)]!)
-        // let currentEvent = GameContent.getCurrentEvent()//  = content["events"]![chestEvent] as! &{String:AnyStruct}
-        // let consts = GameContent.getConsts()
-        // let lootName = *(currentEvent["lootChance"] as! &String)
-        // var lootChance = *((consts["loot"] as! &{String:[UFix64]})[lootName]!)
-            lootChance = modifyChance(array:lootChance,dif:dif)
+       
+            lootChance = modifyChance(array:lootChance,dif:dif,chestEvent:chestEvent)
 
         
             // fabatka
@@ -285,8 +379,9 @@ access(all) contract Chest {
             result.append(<- GameToken.createFabatka(balance:fabatka))
 
         
-            let lootMul = *(chestEvent["lootMul"] as! &UFix64)
-            let lootCount = Int(Chest.lootCount * UFix64(lootMul))
+            let lootCount = *(chestEvent["lootCount"] as! &Int)
+           
+            gamer.setLoot(lootToken:fabatka,lootNFT:lootCount)
         
             var lootType:[String] = []
             switch(chest.type) {
@@ -300,9 +395,8 @@ access(all) contract Chest {
                     lootType = ["spell","item","need"]
             }
 
-          
-        
-        
+            lootChance = applyCharm(chestCharm:chestCharm,lootChance:lootChance,lootType:lootType)
+
             var i = 0
             while i < lootCount {
                 let lType = lootType[Utils.chooseIndex(lootChance,rng.random())]
@@ -355,9 +449,4 @@ access(all) contract Chest {
         return <- receipt
     }
  
-    init() {
-        self.difBonus = 0.02
-        self.lootCount = 4.0
-    }
-    
 }

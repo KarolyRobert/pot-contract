@@ -15,18 +15,18 @@ access(all) contract Utils {
         return result
     }
 
-    access(all) view fun getGrowChance(level:Int,category:String,Event:&{String:AnyStruct},Consts:&{String:{String:AnyStruct}}):UFix64{
+    access(all) view fun getGrowChance(level:Int,category:String,Event:&{String:AnyStruct},Consts:&{String:AnyStruct}):UFix64{
         let growName = Event["growth"]! as! &String // az aktuális eventhez tartozó növekedési lista
-        let growMuls = Consts["growth"]![*growName] as! &{String:UFix64} // az aktuális növekedési szorzók, categóriák szerint
+        let growMuls = (Consts["growth"] as! &{String:AnyStruct})[*growName] as! &{String:UFix64} // az aktuális növekedési szorzók, categóriák szerint
         return self.chance(level,growMuls[category]!) // a növekedési szorzó
     }
 
-    access(all) view fun getCompozitChance(main:Int,seconder:Int,category:String,Event:&{String:AnyStruct},Consts:&{String:{String:AnyStruct}}):UFix64 {
+    access(all) view fun getCompozitChance(main:Int,seconder:Int,category:String,Event:&{String:AnyStruct},Consts:&{String:AnyStruct}):UFix64 {
         let iterations = main - ((seconder * 100) / 130)
         return self.getGrowChance(level: iterations, category: category, Event: Event, Consts: Consts)
     }
 
-    access(all) view fun getNeedCount(base:Int,level:Int,category:String,Consts:&{String:{String:AnyStruct}}):Int {
+    access(all) view fun getNeedCount(base:Int,level:Int,category:String,Consts:&{String:AnyStruct}):Int {
         let divider = Consts["needDiv"] as! &{String:Int}[category]!
         let addition = Int(UFix64(level)/UFix64(divider))
         return base + addition
@@ -49,7 +49,7 @@ access(all) contract Utils {
         return result
     }
 
-    access(all) view fun getUpgradePrice(category:String,meta:{String:AnyStruct},Consts:&{String:{String:AnyStruct}}):UFix64 {
+    access(all) view fun getUpgradePrice(category:String,meta:{String:AnyStruct},Consts:&{String:AnyStruct}):UFix64 {
         let level = meta["level"] as! Int
         let quality = meta["quality"] as! String
         let zone = meta["zone"] as! Int
@@ -63,7 +63,7 @@ access(all) contract Utils {
     }
 
     // ez a függvény csak az avatár fejlesztésekor van hasnálva
-    access(all) view fun getPrice(category:String,level:Int,quality:String,Consts:&{String:{String:AnyStruct}}):UFix64 {
+    access(all) view fun getPrice(category:String,level:Int,quality:String,Consts:&{String:AnyStruct}):UFix64 {
         let fabatka = Consts["fabatka"] as! &{String:AnyStruct}
         let prices = fabatka["upgrade"] as! &{String:UFix64}
         let levelMul = self.pow(base:*(fabatka["level"] as! &UFix64),exp:level)

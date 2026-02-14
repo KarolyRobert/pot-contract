@@ -1,5 +1,6 @@
 import "GameNFT"
 import "GameToken"
+import "GameMarket"
 import "Random"
 
 transaction {
@@ -25,6 +26,11 @@ transaction {
         acct.storage.save(<- receiptStoreRes, to: Random.ReceiptStoragePath)
         let receiptCap = acct.capabilities.storage.issue<&Random.ReceiptStore>(Random.ReceiptStoragePath)
         acct.capabilities.publish(receiptCap, at: Random.ReceiptPublicPath)
+
+        let market <- GameMarket.createEmptyMarket()
+        acct.storage.save(<- market, to: GameMarket.MarketStoragePath)
+        let marketCap = acct.capabilities.storage.issue<&GameMarket.ListingCollection>(GameMarket.MarketStoragePath)
+        acct.capabilities.publish(marketCap, at: GameMarket.MarketPublicPath)
 
     }
 

@@ -14,7 +14,7 @@ transaction(upgradeable:UInt64,uniq:UInt64,needs:[UInt64]) {
 
         let collection = user.storage.borrow<auth (NonFungibleToken.Withdraw)  &GameNFT.Collection>(from:GameNFT.CollectionStoragePath) ?? panic("Collection")
         let vault = user.storage.borrow<auth (FungibleToken.Withdraw) &GameToken.Fabatka>(from: GameToken.VaultStoragePath) ?? panic("vault")
-        let receipts = user.storage.borrow<auth (Random.TakePut) &Random.ReceiptStore>(from:Random.ReceiptStoragePath) ?? panic("ReceiptStore")
+        let receipts = user.storage.borrow<auth (Random.Put) &Random.ReceiptStore>(from:Random.ReceiptStoragePath) ?? panic("ReceiptStore")
 
         let item <- collection.withdraw(withdrawID:upgradeable) as! @GameNFT.MetaNFT
         

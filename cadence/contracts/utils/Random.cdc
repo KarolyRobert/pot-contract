@@ -4,7 +4,8 @@ import "RandomConsumer"
 
 access(all) contract Random {
 
-    access(all) entitlement TakePut
+    access(all) entitlement Put
+    access(all) entitlement Reveal
 
     access(all) let ReceiptStoragePath: StoragePath
     access(all) let ReceiptPublicPath: PublicPath
@@ -75,21 +76,17 @@ access(all) contract Random {
     access(all) resource ReceiptStore {
         access(all) var receipts: @{UInt64:{RandomConsumer.RequestWrapper}}
 
-        access(TakePut) fun put(receipt: @{RandomConsumer.RequestWrapper}) {
+        access(Put) fun put(receipt: @{RandomConsumer.RequestWrapper}) {
             let res <- receipt
             self.receipts[res.uuid] <-! res
         }
 
-        access(TakePut) fun getReceipts(_ ids:[UInt64]):@[{RandomConsumer.RequestWrapper}] {
-            let result:@[{RandomConsumer.RequestWrapper}] <- []
-            while ids.length > 0 {
-                let id = ids.removeFirst()
-                let receipt <- self.receipts.remove(key: id) 
-                ?? panic("Receipt not found")
-                result.append(<-receipt)
-            }
-            
-            return <- result
+        access(Reveal) fun reveal(_ id:UInt64):@[AnyResource] {
+            let receiptRef = &self.receipts[id] as auth (RandomConsumer.Reveal) &{RandomConsumer.RequestWrapper}? ?? panic("Not found!")
+            let result <- receiptRef.reveal()
+            let reveald <- self.receipts.remove(key:id)!
+            destroy reveald
+            return <-result
         }
 
         access(all) view fun getData():{UInt64:{String:AnyStruct}} {  
@@ -113,8 +110,8 @@ access(all) contract Random {
 
     init() {
         self.consumer <- RandomConsumer.createConsumer()
-        self.ReceiptStoragePath = StoragePath(identifier: "receipt_".concat(self.account.address.toString()))!
-        self.ReceiptPublicPath = PublicPath(identifier: "receipt_public_".concat(self.account.address.toString()))!
+        self.ReceiptStoragePath = StoragePath(identifier: "receipt_\(self.account.address.toString())")!
+        self.ReceiptPublicPath = PublicPath(identifier: "receipt_public_\(self.account.address.toString())")!
     }
 
 

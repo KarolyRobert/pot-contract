@@ -13,7 +13,7 @@ transaction(avatarID:UInt64,seconderID:UInt64,options:[Int]) {
 
         let collection = user.storage.borrow<auth (NonFungibleToken.Withdraw)  &GameNFT.Collection>(from:GameNFT.CollectionStoragePath) ?? panic("Collection")
         let vault = user.storage.borrow<auth (FungibleToken.Withdraw) &GameToken.Fabatka>(from: GameToken.VaultStoragePath) ?? panic("vault")
-        let receipts = user.storage.borrow<auth (Random.TakePut) &Random.ReceiptStore>(from:Random.ReceiptStoragePath) ?? panic("ReceiptStore")
+        let receipts = user.storage.borrow<auth (Random.Put) &Random.ReceiptStore>(from:Random.ReceiptStoragePath) ?? panic("ReceiptStore")
         let avatar <- collection.withdraw(withdrawID:avatarID) as! @{GameNFT.INFT}
         let seconder <- collection.withdraw(withdrawID:seconderID) as! @{GameNFT.INFT}
         let consts = GameContent.getConsts()

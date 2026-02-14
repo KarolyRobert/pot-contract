@@ -4,6 +4,7 @@ import "NonFungibleToken"
 import "FungibleToken"
 import "FlowToken"
 import "GameToken"
+import "GameIdentity"
 
 
 access(all) contract GameMarket {
@@ -384,12 +385,9 @@ access(all) contract GameMarket {
             self.revision = self.revision + 1
         }
 
-
-      
         access(CreateListing) fun nftListing(type:String,offers:{String:UFix64},sell:@[{GameNFT.INFT}]) {
 
             let owner = self.owner ?? panic("Must have Collection in storage!")
-             
 
             let royaltyOffers = GameMarket.createRoyalityOffers(offers:offers)
             let listed <- GameMarket.createListingNFT(address:owner.address,type: type, sell:<- sell)
@@ -404,6 +402,8 @@ access(all) contract GameMarket {
             self.listings[id] <-! listing
         }
 
+        
+
         access(self) view fun getListingProps(type:String,data:{String:AnyStruct}):{String:String} {
              let nftData = data["nft"] as! {String:AnyStruct}
                 var nftCategory = nftData["category"] as! String
@@ -416,6 +416,8 @@ access(all) contract GameMarket {
                 }
             return {"category":nftCategory,"type":nftType}
         }
+
+
 
         access(RemoveListing) fun removeListing(id:UInt64):@[AnyResource] {
             let owner = self.owner ?? panic("Must have Collection in storage!")
@@ -433,13 +435,46 @@ access(all) contract GameMarket {
             panic("Missing listing!")
         }
 
+        access(RemoveListing) fun cleanResolved() {
+            let keys = self.listings.keys
+            while keys.length > 0 {
+                let key = keys.removeFirst()
+                if let listing = &self.listings[key] as &{GameMarket.IListing}? {
+                    if listing.resolved {
+                        let resolved <- self.listings.remove(key: key)!
+                        destroy resolved
+                    }
+                }
+            }
+        }
 
-        access(all) fun purchase(id:UInt64,payment:@{FungibleToken.Vault}):@[AnyResource] {
+        access(CreateListing) fun priceUpdate(id:UInt64,offers:{String:UFix64}) {
+            if let listing = &self.listings[id] as &{GameMarket.IListing}? {
+
+                let type = listing.type
+                let delisted <- self.removeListing(id: id)
+                let sell:@[{GameNFT.INFT}] <-[]
+                while delisted.length > 0 {
+                    let res <- delisted.removeFirst()
+                    if let nft <- res as? @{GameNFT.INFT} {
+                        sell.append( <- nft)
+                    }else{
+                        panic("Listing \(id.toString()) not an NFT listing!")
+                    }
+                }
+                destroy delisted
+                self.nftListing(type: type, offers: offers, sell: <- sell)
+               
+            }
+        }
+
+        access(all) fun purchase(id:UInt64,payment:@{FungibleToken.Vault},gamer: auth(GameIdentity.Market) &GameIdentity.Gamer):@[AnyResource] {
 
             self.onRevision()
 
             let seller = self.owner ?? panic("Must have Collection in storage!")
-
+            let sellerGamer = seller.capabilities.borrow<&GameIdentity.Gamer>(GameIdentity.GamerPublicPath) ?? panic("Missing Seller Identity!")
+          
             if let listing = &self.listings[id] as &{GameMarket.IListing}? {
                 if listing.resolved { panic("Listing sold!") }
                 let paymentType = payment.getType()
@@ -462,6 +497,8 @@ access(all) contract GameMarket {
                             let royaltyVault = royalityAccount.capabilities.borrow<&FlowToken.Vault>(/public/flowTokenReceiver) ?? panic("Missing royalty vault")
                             royaltyVault.deposit(from: <- royaltyAmount)
                             sellerVault.deposit(from: <- payment)
+                            sellerGamer.setTrade(token: "flow", spend: 0.0, trade: soldValue)
+                            gamer.setTrade(token: "flow", spend: amount, trade: 0.0)
                             let result <- listing.resolve(sold:true,currency:"flow",value:soldValue)
                             emit PurchaseNFT(action:"delete",seller:seller.address,listing:id,category:props["category"]!,type:props["type"]!)
                             return <- result
@@ -470,11 +507,13 @@ access(all) contract GameMarket {
                             let royaltyVault = royalityAccount.capabilities.borrow<&GameToken.Fabatka>(GameToken.VaultPublicPath) ?? panic("Missing royalty vault")
                             royaltyVault.deposit(from: <- royaltyAmount)
                             sellerVault.deposit(from: <- payment)
+                            sellerGamer.setTrade(token: "fabatka", spend: 0.0, trade: soldValue)
+                            gamer.setTrade(token: "fabatka", spend: amount, trade: 0.0)
                             let result <- listing.resolve(sold:true,currency:"fabatka",value:soldValue)
                             emit PurchaseNFT(action:"delete",seller:seller.address,listing:id,category:props["category"]!,type:props["type"]!)
                             return <- result
                         default:
-                            panic("Unsupported payment!")                                  
+                            panic("Unsupported payment!")                               
                     }
                     
                 }

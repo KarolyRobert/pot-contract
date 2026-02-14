@@ -84,15 +84,7 @@ access(all) contract GameNFT: NonFungibleToken {
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <-GameNFT.createEmptyCollection(nftType: Type<@GameNFT.BaseNFT>())
         }
-/* 
-        access(all) view fun getViews(): [Type] {
-            return []
-        }
 
-        access(all) fun resolveView(_ view: Type): AnyStruct? {
-            return nil
-        }
-*/
         init(category:String,type:String){
 
             post {
@@ -173,6 +165,7 @@ access(all) contract GameNFT: NonFungibleToken {
         access(all) let category:String
         access(all) let type:String
         access(all) let meta:Meta.MetaBuilder
+        access(account) var changeBlock:UInt64
 
         access(all) view fun getData():{String:AnyStruct} {
             let meta = self.meta.build()
@@ -186,10 +179,12 @@ access(all) contract GameNFT: NonFungibleToken {
                 case "item":
                     resultMeta["level"] = meta["level"]
                     resultMeta["needs"] = meta["needs"]
+                    resultMeta["fate"] = meta["fate"]
                     break
                 case "spell":
                     resultMeta["level"] = meta["level"]
                     resultMeta["needs"] = meta["needs"]
+                    resultMeta["fate"] = meta["fate"]
                     break
                 case "avatar":
                     resultMeta["level"] = meta["level"]
@@ -199,6 +194,9 @@ access(all) contract GameNFT: NonFungibleToken {
                     resultMeta["skills"] = meta["skills"]
                     resultMeta["items"] = meta["items"]
                     resultMeta["spells"] = meta["spells"]
+                    if let name = meta["name"] as? String {
+                        resultMeta["name"] = name
+                    }
                     break
                 case "charm":
                     resultMeta["level"] = meta["level"]
@@ -210,6 +208,9 @@ access(all) contract GameNFT: NonFungibleToken {
                     resultMeta["wLevel"] = meta["wLevel"]
                     resultMeta["event"] = meta["event"]
                     resultMeta["class"] = meta["class"]
+                    if let charm = meta["charm"] as? {String:AnyStruct} {
+                        resultMeta["charm"] = charm
+                    }
                     break
             }
 
@@ -236,6 +237,7 @@ access(all) contract GameNFT: NonFungibleToken {
             self.category = category
             self.type = type
             self.meta = Meta.MetaBuilder(meta)
+            self.changeBlock = getCurrentBlock().height
         }
     }
 
@@ -344,7 +346,10 @@ access(all) contract GameNFT: NonFungibleToken {
         }
 
         access(Equip) fun setAvatarEquipment(avatarId:UInt64,equipment:{String:AnyStruct}) {
-           
+            
+            let consts = GameContent.getConsts()
+            let zoneSize = consts["zoneSize"] as! &Int
+
             if let avatarRef = &self.ownedNFTs[avatarId] as &{NonFungibleToken.NFT}? {
                 if let avatar = avatarRef as? &GameNFT.MetaNFT {
                     if avatar.category == "avatar" {
@@ -355,7 +360,7 @@ access(all) contract GameNFT: NonFungibleToken {
                         let newItems = equipment["items"] as! {String:UInt64}
                         let newSpells = equipment["spells"] as! {Int:UInt64}
                         let level = currentMeta["level"] as! Int
-                        let zone = level / GameContent.zoneSize
+                        let zone = level / *zoneSize
                         let avatarClass = currentMeta["class"] as! String
 
                         if let charmRef = &self.ownedNFTs[newCharm] as &{NonFungibleToken.NFT}? {

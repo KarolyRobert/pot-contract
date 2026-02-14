@@ -9,10 +9,10 @@ access(all) fun main(users:[Address]): {String:AnyStruct} {
         let address = users.removeFirst()
         let account = getAccount(address)
         if let gamer = account.capabilities.borrow<&GameIdentity.Gamer>(GameIdentity.GamerPublicPath) {
-            let icon = gamer.getIcon()
-            result[address.toString()] =  {"address":address,"icon":icon}
+            let identity = gamer.getIdentity()
+            result[address.toString()] =  {"address":address,"identity":identity}
         }else{
-            result[address.toString()] = {"address":address,"icon":{"avatar":"default","id":0}}
+            result[address.toString()] = {"address":address,"identity":{"avatar":"default","id":0}}
         }
        
     }
