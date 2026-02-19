@@ -1,187 +1,179 @@
-## 👋 Welcome Flow Developer!
+# System Architecture Overview
+🇭🇺 Hungarian version available here:
+> [Rendszerarchitektúra – Áttekintés](README_HU.md)
 
-This project is a starting point for you to develop smart contracts on the Flow Blockchain. It comes with example contracts, scripts, transactions, and tests to help you get started.
+This document describes the high-level architecture and core design principles of the system. The goal is to ensure **deterministic, auditable, and version-controlled gameplay**, where on-chain and off-chain components are strictly aligned through shared, verifiable rules.
 
-## 🔨 Getting Started
+---
 
-Here are some essential resources to help you hit the ground running:
+## Core Architecture
 
-- **[Flow Documentation](https://developers.flow.com/)** - The official Flow Documentation is a great starting point to start learning about [building](https://developers.flow.com/build/flow) on Flow.
-- **[Cadence Documentation](https://cadence-lang.org/docs/language)** - Cadence is the native language for the Flow Blockchain. It is a resource-oriented programming language that is designed for developing smart contracts.  The documentation is a great place to start learning about the language.
-- **[Visual Studio Code](https://code.visualstudio.com/)** and the **[Cadence Extension](https://marketplace.visualstudio.com/items?itemName=onflow.cadence)** - It is recommended to use the Visual Studio Code IDE with the Cadence extension installed.  This will provide syntax highlighting, code completion, and other features to support Cadence development.
-- **[Flow Clients](https://developers.flow.com/tools/clients)** - There are clients available in multiple languages to interact with the Flow Blockchain.  You can use these clients to interact with your smart contracts, run transactions, and query data from the network.
-- **[Block Explorers](https://developers.flow.com/ecosystem/block-explorers)** - Block explorers are tools that allow you to explore on-chain data.  You can use them to view transactions, accounts, events, and other information.  [Flowser](https://flowser.dev/) is a powerful block explorer for local development on the Flow Emulator.
+The system consists of **five clearly separated main components**, each with a well-defined responsibility.
 
-## 📦 Project Structure
+### 1. Versioned Content Database
 
-Your project has been set up with the following structure:
+A version-controlled public data source that defines the **rules and content of the system**.
 
-- `flow.json` - This is the configuration file for your project (analogous to a `package.json` file for NPM).  It has been initialized with a basic configuration and your selected Core Contract dependencies to get started.
+* Ensures **verifiable and auditable expansion** of game rules and content
+* Every content change is versioned and immutable once published
+* Serves as the single source of truth for gameplay rules
 
-  Your project has also been configured with the following dependencies.  You can add more dependencies using the `flow deps add` command:
-    - `NonFungibleToken`
-    - `ViewResolver`
+This database is designed to allow the system to evolve **without breaking historical determinism**.
 
-- `/cadence` - This is where your Cadence smart contracts code lives
+---
 
-Inside the `cadence` folder you will find:
-- `/contracts` - This folder contains your Cadence contracts (these are deployed to the network and contain the business logic for your application)
-  - `Counter.cdc`
-- `/scripts` - This folder contains your Cadence scripts (read-only operations)
-  - `GetCounter.cdc`
-- `/transactions` - This folder contains your Cadence transactions (state-changing operations)
-  - `IncrementCounter.cdc`
-- `/tests` - This folder contains your Cadence tests (integration tests for your contracts, scripts, and transactions to verify they behave as expected)
+### 2. On-Chain State Management (Contracts)
 
-## Running the Existing Project
+Smart contracts are responsible for **all on-chain state transitions**, based exclusively on the **currently active content version**.
 
-### Executing the `GetCounter` Script
+* No hardcoded game logic beyond minimal validation
+* All behavior is derived from versioned content
+* Guarantees that on-chain outcomes are reproducible and rule-bound
 
-To run the `GetCounter` script, use the following command:
+---
 
-```shell
-flow scripts execute cadence/scripts/GetCounter.cdc
-```
+### 3. Versioned Rule Interpreter (Off-Chain)
 
-### Sending the `IncrementCounter` Transaction
+A version-controlled off-chain codebase that interprets gameplay actions according to the **active content version**.
 
-To run the `IncrementCounter` transaction, use the following command:
+* Acts as a deterministic rule interpreter
+* Supervises off-chain gameplay flows
+* Ensures that all player actions conform to the same rule set used on-chain
 
-```shell
-flow transactions send cadence/transactions/IncrementCounter.cdc
-```
+This component bridges real-time gameplay with on-chain determinism.
 
-To learn more about using the CLI, check out the [Flow CLI Documentation](https://developers.flow.com/tools/flow-cli).
+---
 
-## 👨‍💻 Start Developing
+### 4. Public Gameplay Action Database
 
-### Creating a New Contract
+A public, append-only database storing **validated gameplay actions**.
 
-To add a new contract to your project, run the following command:
+* Every action is validated by the rule interpreter
+* Strict access and modification controls
+* Enables full replay, audit, and verification of any game session
 
-```shell
-flow generate contract
-```
+This database represents the **public history of gameplay**.
 
-This command will create a new contract file and add it to the `flow.json` configuration file.
+---
 
-### Creating a New Script
+### 5. Authorized Transaction Endpoint
 
-To add a new script to your project, run the following command:
+An authorization layer responsible for validating **reward claims and external constraints**.
 
-```shell
-flow generate script
-```
+* Verifies reward eligibility based on the public gameplay database
+* Controls authorized reward-claim transactions
+* Validates external data such as:
 
-This command will create a new script file.  Scripts are used to read data from the blockchain and do not modify state (i.e. get the current balance of an account, get a user's NFTs, etc).
+  * Avatar names
+  * Community guideline compliance
 
-You can import any of your own contracts or installed dependencies in your script file using the `import` keyword.  For example:
+Only players with **provably valid gameplay outcomes** can claim rewards.
 
-```cadence
-import "Counter"
-```
+---
 
-### Creating a New Transaction
+## GameContent Contract (Core Component)
 
-To add a new transaction to your project you can use the following command:
+The **GameContent contract** is the most critical element of the entire system.
 
-```shell
-flow generate transaction
-```
+Its purpose is to make **all game rules and content publicly verifiable, versioned, and extensible**.
 
-This command will create a new transaction file.  Transactions are used to modify the state of the blockchain (i.e purchase an NFT, transfer tokens, etc).
+### Responsibilities
 
-You can import any dependencies as you would in a script file.
+* Stores the **currently active content snapshot** (only data required for on-chain validation)
+* Maintains **hash-based versioning** of content
+* Provides a foundation for future **audit code versioning**
 
-### Creating a New Test
+For efficiency reasons, the contract does **not store the full content**, only the subset that directly affects on-chain behavior.
 
-To add a new test to your project you can use the following command:
+---
 
-```shell
-flow generate test
-```
+### Audit Codebase (Future Phase)
 
-This command will create a new test file.  Tests are used to verify that your contracts, scripts, and transactions are working as expected.
+A planned audit codebase will be introduced with **hash-based version tracking**, referenced by the GameContent contract.
 
-### Installing External Dependencies
+* Acts as a reducer over gameplay actions
+* Validates actions based on:
 
-If you want to use external contract dependencies (such as NonFungibleToken, FlowToken, FungibleToken, etc.) you can install them using [Flow CLI Dependency Manager](https://developers.flow.com/tools/flow-cli/dependency-manager).
+  * Active content version
+  * NFTs owned by participants in the given game
+* Supervises off-chain gameplay deterministically
 
-For example, to install the NonFungibleToken contract you can use the following command:
+The resulting action log is stored in the public gameplay database.
 
-```shell
-flow deps add mainnet://1d7e57aa55817448.NonFungibleToken
-```
+---
 
-Contracts can be found using [ContractBrowser](https://contractbrowser.com/), but be sure to verify the authenticity before using third-party contracts in your project.
+## Reward Eligibility and Claims
 
-## 🧪 Testing
+* Game winners earn the **right to claim rewards** through valid gameplay
+* Rewards are claimed via **authorized on-chain transactions**
+* Eligibility is derived exclusively from validated gameplay history
 
-To verify that your project is working as expected you can run the tests using the following command:
+There is no discretionary reward distribution.
 
-```shell
-flow test
-```
+---
 
-This command will run all tests with the `_test.cdc` suffix (these can be found in the `cadence/tests` folder). You can add more tests here using the `flow generate test` command (or by creating them manually).
+## Asset Generation Sources
 
-To learn more about testing in Cadence, check out the [Cadence Test Framework Documentation](https://cadence-lang.org/docs/testing-framework).
+NFTs and tokens generated by the system originate from multiple sources (beyond loot chests):
 
-## 🚀 Deploying Your Project
+### 1. Failed Upgrades
 
-To deploy your project to the Flow network, you must first have a Flow account and have configured your deployment targets in the `flow.json` configuration file.
+* Special resources may be generated as a result of unsuccessful upgrade attempts
+* Failure is treated as a meaningful, rule-defined outcome
 
-You can create a new Flow account using the following command:
+---
 
-```shell
-flow accounts create
-```
+### 2. NPC-Based Trading (GameNPC Contract)
 
-Learn more about setting up deployment targets in the [Flow CLI documentation](https://developers.flow.com/tools/flow-cli/deployment/project-contracts).
+* Dynamically rotating NPCs with limited supply
+* Fully on-chain supervised trading logic
+* NPC availability and offers are rule-defined and time-dependent
 
-### Deploying to the Flow Emulator
+---
 
-To deploy your project to the Flow Emulator, start the emulator using the following command:
+### 3. Player Marketplace (GameMarket Contract)
 
-```shell
-flow emulator --start
-```
+* Peer-to-peer trading between players
+* Supports:
 
-To deploy your project, run the following command:
+  * Utility token
+  * Flow token
+* Backed by an external indexed database for efficient discovery
 
-```shell
-flow project deploy --network=emulator
-```
+The marketplace remains **non-custodial** and rule-driven.
 
-This command will start the Flow Emulator and deploy your project to it. You can now interact with your project using the Flow CLI or alternate [client](https://developers.flow.com/tools/clients).
+---
 
-### Deploying to Flow Testnet
+## NFT Model
 
-To deploy your project to Flow Testnet you can use the following command:
+The system defines **three NFT types**, all implementing a shared interface.
 
-```shell
-flow project deploy --network=testnet
-```
+* `category` and `type` fields determine internal structure and behavior
+* NFT behavior is defined in a **public, versioned content database**
 
-This command will deploy your project to Flow Testnet. You can now interact with your project on this network using the Flow CLI or any other Flow client.
+### NFT Types
 
-### Deploying to Flow Mainnet
+#### BaseNFT
 
-To deploy your project to Flow Mainnet you can use the following command:
+* Resources required for upgrades and crafting
 
-```shell
-flow project deploy --network=mainnet
-```
+#### MetaNFT
 
-This command will deploy your project to Flow Mainnet. You can now interact with your project using the Flow CLI or alternate [client](https://developers.flow.com/tools/clients).
+* Upgradeable NFTs with distinct roles and functions
+* Core gameplay assets
 
-## 📚 Other Resources
+#### PackNFT
 
-- [Cadence Design Patterns](https://cadence-lang.org/docs/design-patterns)
-- [Cadence Anti-Patterns](https://cadence-lang.org/docs/anti-patterns)
-- [Flow Core Contracts](https://developers.flow.com/build/core-contracts)
+* NFTs that enable storage, grouping, and batch operations
+* Designed to simplify inventory management and trading
 
-## 🤝 Community
-- [Flow Community Forum](https://forum.flow.com/)
-- [Flow Discord](https://discord.gg/flow)
-- [Flow Twitter](https://x.com/flow_blockchain)
+---
+
+## Design Principles
+
+* Determinism over convenience
+* Verifiability over trust
+* Versioned evolution instead of mutable rules
+* Clear separation between authority, validation, and execution
+
+This architecture ensures that **every meaningful game outcome can be independently verified**, both on-chain and off-chain.
