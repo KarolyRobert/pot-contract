@@ -13,6 +13,7 @@ access(all) contract Upgrade {
 
     access(all) event UpgradeCommit(nftID:UInt64, commitBlock: UInt64, receiptID: UInt64)
     access(all) event UpgradeReveal(result:[UInt64], commitBlock: UInt64, receiptID: UInt64)
+    access(all) event RollReveal(chance:UFix64,roll:UFix64)
 
     access(all) resource Receipt : RandomConsumer.RequestWrapper {
         access(all) let id:UInt64
@@ -178,7 +179,9 @@ access(all) contract Upgrade {
                 let needType = nft.category == "item" ? "aids" : "alcs"
                 let needNames = *(GameContent.getZoneContent(key:needType, zone: zone).keys)
 
-                if chance > rng.random() { // level up , change aids os alcs
+                let randomRoll = rng.random()
+                emit RollReveal(chance:chance,roll:randomRoll)
+                if chance > randomRoll { // level up , change aids os alcs
                     gamer.setCraft(success: true)
                     // level up
                     nftMeta["level"] = nftLevel + 1

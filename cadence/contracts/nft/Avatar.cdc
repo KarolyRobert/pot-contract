@@ -81,7 +81,6 @@ access(all) contract Avatar {
                             avatarMeta["level"] = main + 1
                         }else {
                             gamer.setCraft(success: false)
-                            avatarMeta["fate"] = (avatarMeta["fate"] as! Int) + 1
                         }
                     }else{
                         validation = "error"

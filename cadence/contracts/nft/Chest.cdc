@@ -93,6 +93,7 @@ access(all) contract Chest {
                 }
                 return lootChance
             }
+            
             let content:{String:&{String:AnyStruct}} = {}
 
             let needContent = fun(_ need:[String],_ z:Int?){
@@ -140,6 +141,11 @@ access(all) contract Chest {
            
             needContent(["events","consts"],nil)
             let zoneSize = (content["consts"]!["consts"] as! &{String:AnyStruct}["zoneSize"]) as! &Int
+            let charmFate = *((content["consts"]!["consts"] as! &{String:AnyStruct}["charmFate"]) as! &Int)
+            let charmMul = *((content["consts"]!["consts"] as! &{String:AnyStruct}["charmMul"]) as! &Int)
+            let fateMul = *((content["consts"]!["consts"] as! &{String:AnyStruct}["fateMul"]) as! &Int)
+            let baseFate = *((content["consts"]!["consts"] as! &{String:AnyStruct}["baseFate"]) as! &Int)
+
             let zone = chestLevel / *zoneSize
 
             let mintItem = fun ():@{GameNFT.INFT}{
@@ -153,9 +159,12 @@ access(all) contract Chest {
                 var charmQuality = ""
                 var charmMultiply = 0
                 var charmItem = ""
+                var charmFateBase = 0
                 if chestCharm != nil {
+                    let charmLevel = chestCharm!["level"] as! Int
                     charmQuality = chestCharm!["quality"] as! String
-                    charmMultiply = chestCharm!["level"] as! Int / 2
+                    charmMultiply = charmLevel / charmMul
+                    charmFateBase = charmLevel * charmFate // 0-60
                     if chestCharm!["category"] as! String == "item" && chestCharm!["zone"] as! Int == zone {
                         charmItem = chestCharm!["type"] as! String
                     }
@@ -217,8 +226,15 @@ access(all) contract Chest {
                 let aidNames = aids.keys
                 let quality_pos = Utils.getQualityIndex(quality) + 1
 
-                let fateBase = quality_pos * 100
-                let fate = fateBase + rng.nextInt(max: fateBase)
+
+                let fateRandomBase = quality_pos * fateMul
+                let fateRandom = fateRandomBase - charmFateBase
+                var fate = 0
+                if fateRandom <= 0 {
+                    fate = baseFate + fateRandomBase
+                }else{
+                    fate = baseFate + charmFateBase + rng.nextInt(max: fateRandom)
+                }
                 
                 let needs = Utils.chooseMore(*aidNames,rng.intArray(length:quality_pos,max:aidNames.length))
             
@@ -278,7 +294,7 @@ access(all) contract Chest {
                             "armor":0 as UInt64,
                             "helmet":0 as UInt64,
                             "boots":0 as UInt64,
-                            "ring":0 as UInt64,
+                            "shild":0 as UInt64,
                             "neck":0 as UInt64
                         },
                         "spells":{
@@ -298,11 +314,14 @@ access(all) contract Chest {
                 needContent(["spells","alcs"],zone)
                 let spells = content["spells"]!
                 let types = *spells.keys
-
+                let quality = "rare"
+                var charmFateBase = 0
                 if chestCharm != nil {
+                    let charmLevel = chestCharm!["level"] as! Int
+                    charmFateBase = charmLevel * charmFate // 0-60
                     if chestCharm!["category"] as! String == "spell" && chestCharm!["zone"] as! Int == zone {
                         let charmSpell = chestCharm!["type"] as! String
-                        var multiply = (chestCharm!["level"] as! Int / 2) - 1
+                        var multiply = (charmLevel / charmMul) - 1
                         while multiply > 0 {
                             multiply = multiply - 1
                             types.append(charmSpell)
@@ -310,6 +329,15 @@ access(all) contract Chest {
                     }
                 }
 
+                let quality_pos = Utils.getQualityIndex(quality) + 1
+                let fateRandomBase = quality_pos * fateMul
+                let fateRandom = fateRandomBase - charmFateBase
+                var fate = 0
+                if fateRandom <= 0 {
+                    fate = baseFate + fateRandomBase
+                }else{
+                    fate = baseFate + charmFateBase + rng.nextInt(max: fateRandom)
+                }
 
                 let type = types[rng.nextInt(max: types.length)]
 
@@ -322,14 +350,12 @@ access(all) contract Chest {
                     i = i + 1
                 }
 
-                let fate = rng.nextInt(max: 1000)
-
                 return <- GameNFT.minter.mintMeta(
                     category: "spell",
                     type:type,
                     meta:{
                         "level":0,
-                        "quality":"rare",
+                        "quality":quality,
                         "zone":zone,
                         "needs":needs,
                         "fate":fate
