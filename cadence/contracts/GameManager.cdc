@@ -26,6 +26,12 @@ access(all) contract GameManager {
             let winGamer =  user.capabilities.borrow<&GameIdentity.Gamer>(GameIdentity.GamerPublicPath) ?? panic("Missing Gamer!")
             winGamer.setRank(victory: true)
 
+            if type == "monster" {
+                let progress = meta["level"] as! Int
+                winGamer.setProgress(progress:progress)
+            }
+            
+
             // TODO defeated gamer.setRank(victoty: false)
 
             let nft <- GameNFT.minter.mintMeta(category: "chest", type:type, meta: meta)

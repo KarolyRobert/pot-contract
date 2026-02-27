@@ -345,6 +345,16 @@ access(all) contract GameNFT: NonFungibleToken {
             return result
         }
 
+        access(all) view fun getGear(avatarId:UInt64):{String:AnyStruct} {
+            let block = getCurrentBlock().height
+            let gear = self.getAvatar(avatarId: avatarId)
+            return {
+                "type":"gear",
+                "blockHeight":block,
+                "gear":gear
+            }
+        }
+
         access(Equip) fun setAvatarEquipment(avatarId:UInt64,equipment:{String:AnyStruct}) {
             
             let consts = GameContent.getConsts()

@@ -55,7 +55,12 @@ access(all) contract GameIdentity {
         }
 
         access(all) view fun getIdentity():{String:AnyStruct} {
-            let result:{String:AnyStruct} = {"avatar":"default","name":"unnamed","id":0}
+            let result:{String:AnyStruct} = {
+                "avatar":"default",
+                "name":"unnamed",
+                "id":0,
+                "quest":self.quest.build()
+            }
             if let avatar  = self.avatar {
                 if let owner = self.owner {
                     if let collection = owner.capabilities.borrow<&GameNFT.Collection>(GameNFT.CollectionPublicPath) {
@@ -69,6 +74,7 @@ access(all) contract GameIdentity {
                     }
                 }
             }
+
             if self.hasView(IdentityView.farmer) {
                 result["farm"] = self.farm.build()
             }
@@ -78,7 +84,6 @@ access(all) contract GameIdentity {
             if self.hasView(IdentityView.trader) {
                 result["trade"] = self.trade.build()
             }
-
             return result
         }
 
@@ -134,7 +139,16 @@ access(all) contract GameIdentity {
             role["trade"] = (role["trade"] as! UFix64) + trade
             meta[token] = role
             self.trade.update(meta)
-         }
+        }
+
+        access(account) fun setProgress(progress:Int) {
+            let meta = self.quest.build()
+            let current = meta["progress"] as! Int
+            if current < progress {
+                meta["progress"] = progress
+                self.quest.update(meta)
+            }
+        }
 
         init(){
             self.avatar = nil
@@ -159,7 +173,9 @@ access(all) contract GameIdentity {
                     "trade":zero
                 }
             })
-            self.quest = Meta.MetaBuilder({})
+            self.quest = Meta.MetaBuilder({
+                "progress":0
+            })
         }
     }
 
