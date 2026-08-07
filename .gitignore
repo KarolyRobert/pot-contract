@@ -7,3 +7,5 @@ imports
 testnet-admin.pkey
 roger_admin.pkey
 roger-admin.pkey
+startEmulator.sh
+stopEmulator.sh
