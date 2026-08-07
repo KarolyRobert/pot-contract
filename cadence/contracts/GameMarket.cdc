@@ -120,7 +120,7 @@ access(all) contract GameMarket {
         }
 
         access(all) view fun getNFT():&{GameNFT.INFT} {
-            if(!self.resolved){
+            if !self.resolved {
                 return (&self.listed)!  
             }
             panic("Resolved!")
@@ -301,7 +301,7 @@ access(all) contract GameMarket {
                     emitAvatar()
                     break
                 case "pack":
-                    if(nft.type == "stack"){
+                    if nft.type == "stack" {
                         emitStack()
                     }else{
                         emitPack()
@@ -371,7 +371,7 @@ access(all) contract GameMarket {
             let ids = self.listings.keys
             for id in ids {
                 let listingRef = (&self.listings[id] as &{GameMarket.IListing}?)!
-                if(listingRef.resolved){
+                if listingRef.resolved {
                      let expiredAt = listingRef.soldAt! + self.historyWindow
                      if expiredAt < now {
                         let listing <- self.listings.remove(key: id)
@@ -487,7 +487,7 @@ access(all) contract GameMarket {
                     let royalty = offer.royalty
                     let royaltyPrecent = royalty.royalty
                     let royaltyValue = amount * royaltyPrecent
-                    let receiveAmount = amount - royaltyValue
+                    
                     let royalityAccount = getAccount(royalty.address)
                     let royaltyAmount <- payment.withdraw(amount: royaltyValue)
                     let soldValue = payment.balance

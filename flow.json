@@ -162,7 +162,7 @@
 			}
 		},
 		"roger-admin": {
-			"address": "6fc5d745e058fb0a",
+			"address": "b2c088d5100b9dba",
 			"key": {
 				"type": "file",
 				"location": "roger-admin.pkey"

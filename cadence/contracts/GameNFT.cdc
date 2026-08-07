@@ -5,6 +5,8 @@ import "GameToken"
 import "FlowToken"
 import "Meta"
 
+
+
 access(all) contract GameNFT: NonFungibleToken {
 
     access(all) event EquipAvatar(avatarID:UInt64)
@@ -180,6 +182,7 @@ access(all) contract GameNFT: NonFungibleToken {
                     resultMeta["level"] = meta["level"]
                     resultMeta["needs"] = meta["needs"]
                     resultMeta["fate"] = meta["fate"]
+                    resultMeta["ascendent"] = meta["ascendent"]
                     break
                 case "spell":
                     resultMeta["level"] = meta["level"]
@@ -190,6 +193,7 @@ access(all) contract GameNFT: NonFungibleToken {
                     resultMeta["level"] = meta["level"]
                     resultMeta["class"] = meta["class"]
                     resultMeta["subClass"] = meta["subClass"]
+                    resultMeta["ascendent"] = meta["ascendent"]
                     resultMeta["charm"] = meta["charm"]
                     resultMeta["skills"] = meta["skills"]
                     resultMeta["items"] = meta["items"]
@@ -202,12 +206,14 @@ access(all) contract GameNFT: NonFungibleToken {
                     resultMeta["level"] = meta["level"]
                     resultMeta["type"] = meta["type"]
                     resultMeta["needs"] = meta["needs"]
+                    resultMeta["ascendent"] = meta["ascendent"]
                     break
                 case "chest": // "level":10,"wLevel":2,"event":"default","class":"elit"
                     resultMeta["level"] = meta["level"]
                     resultMeta["wLevel"] = meta["wLevel"]
                     resultMeta["event"] = meta["event"]
                     resultMeta["class"] = meta["class"]
+                    resultMeta["ascendent"] = meta["ascendent"]
                     if let charm = meta["charm"] as? {String:AnyStruct} {
                         resultMeta["charm"] = charm
                     }
@@ -262,7 +268,7 @@ access(all) contract GameNFT: NonFungibleToken {
         }
 
         access(all) view fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}? {
-             return &self.ownedNFTs[id] // as &{NonFungibleToken.NFT} 
+             return &self.ownedNFTs[id] // as &{NonFungibleToken.NFT}
         }
 
         access(NonFungibleToken.Withdraw) fun unpack(packID: UInt64) {
@@ -346,11 +352,10 @@ access(all) contract GameNFT: NonFungibleToken {
         }
 
         access(all) view fun getGear(avatarId:UInt64):{String:AnyStruct} {
-            let block = getCurrentBlock().height
+            let block = getCurrentBlock().id
             let gear = self.getAvatar(avatarId: avatarId)
             return {
-                "type":"gear",
-                "blockHeight":block,
+                "joinBlock":block,
                 "gear":gear
             }
         }

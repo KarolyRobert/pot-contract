@@ -12,4 +12,4 @@ transaction(cVersion:[String],aVersion:[String],contents:{String:{String:AnyStru
     execute {}
 }
 
- // flow transactions send cadence/transactions/updateContent.cdc --args-json "[$(cat ./update/contentVersion.json),$(cat ./update/updateVersion.json),$(cat ./update/cadenceContent.json)]" --signer roger-admin --network testnet
+ // flow transactions send cadence/transactions/updateContent.cdc --args-json "[$(cat ./update/contentVersion.json),$(cat ./update/auditVersion.json),$(cat ./update/cadenceContent.json)]" --signer roger-admin --network testnet --gas-limit 9999

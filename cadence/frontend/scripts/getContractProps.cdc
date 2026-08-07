@@ -7,5 +7,3 @@ access(all) fun main(): {String:AnyStruct} {
         "versions":GameContent.currentVersion
     }
 }
-
-// &GameContent.Version?

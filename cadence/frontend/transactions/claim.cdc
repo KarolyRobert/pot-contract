@@ -64,24 +64,27 @@ transaction(chests:[String]) {
             let parts = chest.split(separator: "|")
 
             let chestMeta:{String:AnyStruct} = {
-                "level":toInt(parts[3]),
-                "wLevel":toInt(parts[4]),
-                "event":parts[5],
-                "class":parts[6]
+                "level":toInt(parts[5]),
+                "wLevel":toInt(parts[5]),
+                "event":parts[6],
+                "class":parts[7],
+                "ascendent":toInt(parts[8])
             }
 
             let chestData:{String:AnyStruct} = {
                 "type":parts[0],
                 "gameId":parts[1],
-                "hash":parts[2]
+                "hash":parts[2],
+                "monsterIndex":toInt(parts[3]),
+                "defeated":parts[4]
             }
-            if parts.length == 12 {
+            if parts.length == 14 {
                 let charm:{String:AnyStruct} = {
-                    "category":parts[7],
-                    "type":parts[8],
-                    "level":toInt(parts[9]),
-                    "quality":parts[10],
-                    "zone":toInt(parts[11])
+                    "category":parts[9],
+                    "type":parts[10],
+                    "level":toInt(parts[11]),
+                    "quality":parts[12],
+                    "zone":toInt(parts[13])
                 }
                 chestMeta["charm"] = charm
             }
@@ -93,8 +96,9 @@ transaction(chests:[String]) {
             let chest = toChest(cString)
             let chestRes <- self.manager.createChest(
                 winner:self.winner,
-                defeated:self.winner, // A vesztes címére cserélni
+                defeated:Address.fromString(chest["defeated"] as! String)!,
                 type:chest["type"] as! String,
+                monsterIndex:chest["monsterIndex"] as! Int,
                 gameId:chest["gameId"] as! String,
                 hash:chest["hash"] as! String,
                 meta:chest["meta"] as! {String:AnyStruct}

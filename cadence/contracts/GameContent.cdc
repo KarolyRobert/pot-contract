@@ -126,6 +126,10 @@ access(all) contract GameContent {
         return self.getContent(key:"consts")["consts"] as! &{String:AnyStruct}
     }
 
+    access(all) view fun getEventName():String {
+        return self.eventName
+    }
+
     access(account) fun setEvent(_ name:String){
         self.eventName = name
     }

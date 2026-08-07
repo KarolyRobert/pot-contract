@@ -209,7 +209,8 @@ access(all) contract Upgrade {
                     }else{ // destroy all mint uniqs 
 
                         let newNeedCount = Utils.getNeedCount(base: baseNeedCount, level: nftLevel, category: nft.category, Consts: consts) // self.getNeedCount(base: baseNeedCount, category: nft.category, level:nftLevel)
-                        let salvage <- MintSalvage.salvage(category: nft.category, zone: zone, count: newNeedCount, currentEvent: currentEvent, rng:rng.nextRNG())
+                        let ascendent = nft.category == "spell" ? Int(getCurrentBlock().timestamp) : nftMeta["ascendent"] as! Int
+                        let salvage <- MintSalvage.salvage(category: nft.category,ascendent:ascendent, zone: zone, count: newNeedCount, currentEvent: currentEvent, rng:rng.nextRNG())
                         gamer.setLoot(lootToken: 0.0, lootNFT: salvage.length)
                         while salvage.length > 0 {
                             let salv <-salvage.removeFirst()

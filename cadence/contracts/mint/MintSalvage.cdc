@@ -7,7 +7,7 @@ import "Utils"
 access(all) contract MintSalvage {
     
 
-    access(account) fun salvage(category:String,zone:Int,count:Int,currentEvent:&{String:AnyStruct},rng:Random.RNG):@[{GameNFT.INFT}] {
+    access(account) fun salvage(category:String,ascendent:Int,zone:Int,count:Int,currentEvent:&{String:AnyStruct},rng:Random.RNG):@[{GameNFT.INFT}] {
         let result:@[{GameNFT.INFT}] <- []
 
         let charmChance = *(currentEvent["charmChance"] as! &UFix64)
@@ -40,7 +40,8 @@ access(all) contract MintSalvage {
                     "level":0,
                     "needs":needCount,
                     "quality":quality,
-                    "zone":zone
+                    "zone":zone,
+                    "ascendent":ascendent
                 })
             result.append(<- charm)
         }

@@ -126,6 +126,7 @@ access(all) contract Chest {
             let chestLevel = chestMeta["level"] as! Int
             let wLevel = chestMeta["wLevel"] as! Int
             let chestClass = chestMeta["class"] as! String
+            let ascendent = chestMeta["ascendent"] as! Int
 
             /*
             The charm bonus for category is precent of his level (max 20%),
@@ -249,7 +250,8 @@ access(all) contract Chest {
                         "quality":quality,
                         "zone":zone,
                         "needs":needs,
-                        "fate":fate
+                        "fate":fate,
+                        "ascendent":ascendent
                     })
             }
 
@@ -287,6 +289,7 @@ access(all) contract Chest {
                         "level":0,
                         "class":class,
                         "subClass":subClass,
+                        "ascendent":ascendent,
                         "skills":avatarSkills,
                         "charm":0 as UInt64,
                         "items":{

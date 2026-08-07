@@ -54,12 +54,15 @@ access(all) contract GameIdentity {
             return false
         }
 
+        access(all) view fun getQuest():{String:AnyStruct} {
+            return self.quest.build()
+        }
+
         access(all) view fun getIdentity():{String:AnyStruct} {
             let result:{String:AnyStruct} = {
                 "avatar":"default",
                 "name":"unnamed",
-                "id":0,
-                "quest":self.quest.build()
+                "id":0
             }
             if let avatar  = self.avatar {
                 if let owner = self.owner {
