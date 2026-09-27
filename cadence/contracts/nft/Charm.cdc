@@ -114,6 +114,7 @@ access(all) contract Charm {
                         let newNeedCount = Utils.getNeedCount(base: baseNeedCount, level: level + 1, category: "charm", Consts: consts)
                         charmMeta["level"] = level + 1
                         charmMeta["needs"] = newNeedCount
+                        charm.change(kind: "upgrade", data:[newNeedCount.toString()])
                         charm.meta.update(charmMeta)
                     }else{
                         gamer.setCraft(success: false)

@@ -52,7 +52,7 @@ access(all) contract Avatar {
          
             let result:@[AnyResource] <- []
             let avatar <- self.getAvatar()
-            let avatarID = avatar.id
+          //  let avatarID = avatar.id
             let price <- self.getPrice()
             let avatarMeta = avatar.meta.build()
             let sacrifice <- self.getSacrifice()
@@ -63,14 +63,15 @@ access(all) contract Avatar {
             let currentEvent = GameContent.getCurrentEvent()
             let consts = GameContent.getConsts()
         
-            var validation:String = "invalid"
+            var validation = "invalid"
 
             let main = avatarMeta["level"] as! Int
             let needPrice = Utils.getPrice(category: "avatar", level: main, quality: "common", Consts: consts)
+            let changeData:[String] = []
 
             if needPrice == price.balance {
             // avatar upgrade
-                if(avatar.type == sacrifice.type){
+                if avatar.type == sacrifice.type {
                     let seconder = sacrificeMeta["level"] as! Int
                     if main >= seconder {
                         // avatar upgrade
@@ -78,6 +79,7 @@ access(all) contract Avatar {
                         let chance = Utils.getCompozitChance(main: main, seconder: seconder, category:"avatar", Event:currentEvent, Consts: consts)//self.chance(main: main, seconder: seconder, mul: growMuls["avatar"]!)
                         if chance > rng.random() {
                             gamer.setCraft(success: true)
+                            changeData.append("levelUp")
                             avatarMeta["level"] = main + 1
                         }else {
                             gamer.setCraft(success: false)
@@ -93,12 +95,12 @@ access(all) contract Avatar {
                 var sacrificeSkills = sacrificeMeta["skills"] as! [{String: AnyStruct}]
 
                 // skill switch
-                if(validation != "error"){
+                if validation != "error" {
                     if options.length > 0 {
                         let skills = GameContent.getContent(key:"skills")
                         
                         for i in options {
-                            if(validation != "error"){
+                            if validation != "error" {
                                 let skillType = sacrificeSkills[i]["type"] as! String
                                 let skillContent = skills[skillType] as! &{String:String}
                                 let skillClass = skillContent["class"]!
@@ -114,9 +116,14 @@ access(all) contract Avatar {
                                     if validation != "error" && (avatarSkills[i]["level"] as! Int) == (sacrificeSkills[i]["level"] as! Int){
                                         validation = "valid"
                                     
-                                        let temp = avatarSkills[i]
+                                        //let temp = avatarSkills[i]
                                         avatarSkills[i] = sacrificeSkills[i]
-                                        sacrificeSkills[i] = temp
+                                        changeData.appendAll([
+                                            "skill_switch",
+                                            i.toString(),
+                                            (sacrificeSkills[i]["type"] as! String)
+                                        ])
+                                        //sacrificeSkills[i] = temp
                                     }else{
                                         
                                         validation = "error"
@@ -137,7 +144,7 @@ access(all) contract Avatar {
                 if validation != "error" {
                     var i = 0
                     while i < 4 {
-                        if((avatarSkills[i]["type"] as! String) == (sacrificeSkills[i]["type"] as! String)){
+                        if(avatarSkills[i]["type"] as! String) == (sacrificeSkills[i]["type"] as! String){
                             validation = "valid"
                             let alevel = avatarSkills[i]["level"] as! Int
                             let slevel = avatarSkills[i]["level"] as! Int
@@ -147,13 +154,14 @@ access(all) contract Avatar {
                             if chance > rng.random() {
                                 gamer.setCraft(success: true)
                                 avatarSkills[i]["level"] = main + 1
+                                changeData.appendAll(["skill_levelUp",i.toString()])
                             }else{
                                 gamer.setCraft(success: false)
                             }
                         }
                         i = i + 1
                     }
-                    if(validation == "valid"){
+                    if validation == "valid" {
                         avatarMeta["skills"] = avatarSkills
                     }
                 }
@@ -163,10 +171,11 @@ access(all) contract Avatar {
 
             let emitResult:[UInt64] = []
             let successResolve:Bool = validation == "valid"
-            var resultToken:UFix64 = 0.0
+            var resultToken = 0.0
             if successResolve {
                 gamer.setBurn(burnToken: needPrice, burnNFT: 1)
                 avatar.meta.update(avatarMeta)
+                avatar.change(kind: "upgrade", data: changeData)
                 emitResult.append(avatar.id)
                 result.append(<-avatar)
                 Burner.burn(<- price)

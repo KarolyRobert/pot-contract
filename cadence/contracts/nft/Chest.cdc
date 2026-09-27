@@ -449,7 +449,6 @@ access(all) contract Chest {
                 loot.append(minted.id)
                 result.append(<- minted)
             }
-
             destroy chest
             
             //emit ChestReveal(chestID:chestId,loot:loot,fabatka:fabatka,commitBlock:commitBlock,receiptID:receiptID)

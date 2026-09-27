@@ -1,10 +1,11 @@
 import "GameContent"
 
 access(all) fun main(): {String:AnyStruct} {
-    let block = getCurrentBlock()
+    let block = getCurrentBlock().height
     return {
-        "eventID":GameContent.getEventName(),
-        "eventBlock":block.id
+        "eventName":GameContent.eventName,
+        "eventEpoch":GameContent.eventEpoch,
+        "eventBlock":block
     }
 
 }

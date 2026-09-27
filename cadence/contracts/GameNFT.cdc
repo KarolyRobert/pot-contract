@@ -10,10 +10,12 @@ import "Meta"
 access(all) contract GameNFT: NonFungibleToken {
 
     access(all) event EquipAvatar(avatarID:UInt64)
+    access(all) event changeNFT(id:UInt64,prevChangeBlock:UInt64?,changeBlock:UInt64,changeEpoch:UInt64,kind:String,data:[String])
 
     access(all) entitlement Equip
 
-    access(contract) var mintedCount:UInt64
+    access(all) var mintedCount:UInt64
+    access(all) var totalSupply:UInt64
 
     /// Standard Paths
     access(all) let CollectionStoragePath: StoragePath
@@ -26,9 +28,11 @@ access(all) contract GameNFT: NonFungibleToken {
         access(all) let id:UInt64
         access(all) let category:String
         access(all) let type:String
+        access(all) var changeBlock:UInt64
+        access(all) var changeEpoch:UInt64
 
         access(all) view fun getData():{String:AnyStruct}
-
+ 
         access(all) view fun getViews(): [Type] {
             return [
                 Type<MetadataViews.Display>(),
@@ -39,14 +43,21 @@ access(all) contract GameNFT: NonFungibleToken {
             ]
         }
 
+        access(account) fun change(kind:String,data:[String]) {
+            let prevChange = self.changeBlock
+            self.changeBlock = getCurrentBlock().height
+            self.changeEpoch = self.changeEpoch + 1
+            emit changeNFT(id:self.id,prevChangeBlock:prevChange,changeBlock:self.changeBlock,changeEpoch:self.changeEpoch,kind:kind,data:data)
+        }
+       
         access(all) fun resolveView(_ view: Type): AnyStruct? {
             switch view {
                 case Type<MetadataViews.Display>():
                     return MetadataViews.Display(
                         name: "RoGeR NFT",
-                        description: "Something useful in The Power of Truth game.",
+                        description: "Something useful in Power of Truth game.",
                         thumbnail: MetadataViews.HTTPFile(
-                            url: "https://cloud.hobbyfork.com/images/\(self.category)/\(self.type).png"
+                            url: "https://pot.hobbyfork.com/images/\(self.category)/\(self.type).png"
                         )
                     )
                 case Type<MetadataViews.Editions>():
@@ -74,6 +85,8 @@ access(all) contract GameNFT: NonFungibleToken {
         access(all) let id:UInt64
         access(all) let category:String
         access(all) let type:String
+        access(all) var changeBlock:UInt64
+        access(all) var changeEpoch:UInt64
 
         access(all) view fun getData():{String:AnyStruct} {
             return {
@@ -83,9 +96,11 @@ access(all) contract GameNFT: NonFungibleToken {
             }
         }
 
+
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <-GameNFT.createEmptyCollection(nftType: Type<@GameNFT.BaseNFT>())
         }
+
 
         init(category:String,type:String){
 
@@ -95,17 +110,55 @@ access(all) contract GameNFT: NonFungibleToken {
             }
 
             GameNFT.mintedCount = GameNFT.mintedCount + 1
+            GameNFT.totalSupply = GameNFT.totalSupply + 1
             self.id = GameNFT.mintedCount
             self.category = category
             self.type = type
+            self.changeBlock = getCurrentBlock().height
+            self.changeEpoch = 0
+            self.change(kind: "mint", data:[category,type])
         }
 
     }
+
+    access(all) fun uintArrayToJSON(_ values: [UInt64]): String {
+        var result = "["
+
+        var i = 0
+        while i < values.length {
+            if i > 0 {
+                result = "\(result),"
+            }
+
+            result = "\(result)\(values[i].toString())"
+            i = i + 1
+        }
+
+        return "\(result)]"
+    }
+
+    access(all) fun stringArrayToJSON(_ values: [String]): String {
+        var result = "["
+
+        var i = 0
+        while i < values.length {
+            if i > 0 {
+                result = "\(result),"
+            }
+
+            result = "\(result)\"\(values[i])\""
+            i = i + 1
+        }
+        return "\(result)]"
+    }
+
 
     access(all) resource PackNFT: INFT {
         access(all) let id:UInt64
         access(all) let category:String
         access(all) let type:String
+        access(all) var changeBlock:UInt64
+        access(all) var changeEpoch:UInt64
         access(account) var packed: @{UInt64: {GameNFT.INFT}}
 
         access(all) view fun getData():{String:AnyStruct} {
@@ -141,7 +194,7 @@ access(all) contract GameNFT: NonFungibleToken {
         }
 
         access(account) fun unpack():@{UInt64: {GameNFT.INFT}} {
-            let packed:@{UInt64: {GameNFT.INFT}} <- self.packed <- {}
+            let packed <- self.packed <- {}
             return <- packed 
         }
 
@@ -155,10 +208,14 @@ access(all) contract GameNFT: NonFungibleToken {
                 self.id == GameNFT.mintedCount
             }
             GameNFT.mintedCount = GameNFT.mintedCount + 1
+            GameNFT.totalSupply = GameNFT.totalSupply + 1
             self.id = GameNFT.mintedCount
             self.category = category
             self.type = type
             self.packed <- packed
+            self.changeBlock = getCurrentBlock().height
+            self.changeEpoch = 0
+            self.change(kind: "mint", data:[category,type,GameNFT.uintArrayToJSON(self.packed.keys)])
         }
     }
 
@@ -167,14 +224,18 @@ access(all) contract GameNFT: NonFungibleToken {
         access(all) let category:String
         access(all) let type:String
         access(all) let meta:Meta.MetaBuilder
-        access(account) var changeBlock:UInt64
+        access(all) var changeBlock:UInt64
+        access(all) var changeEpoch:UInt64
+
 
         access(all) view fun getData():{String:AnyStruct} {
             let meta = self.meta.build()
             let result:{String:AnyStruct} = {
                 "id":self.id,
                 "category":self.category,
-                "type":self.type
+                "type":self.type,
+                "changeBlock":self.changeBlock,
+                "changeEpoch":self.changeEpoch
             }
             var resultMeta:{String:AnyStruct} = {}
             switch(self.category){
@@ -231,7 +292,7 @@ access(all) contract GameNFT: NonFungibleToken {
 
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <-GameNFT.createEmptyCollection(nftType: Type<@GameNFT.MetaNFT>())
-        }
+        } 
 
         init(category:String,type:String,meta:{String:AnyStruct}){
             post {
@@ -239,11 +300,66 @@ access(all) contract GameNFT: NonFungibleToken {
                 self.id == GameNFT.mintedCount
             }
             GameNFT.mintedCount = GameNFT.mintedCount + 1
+            GameNFT.totalSupply = GameNFT.totalSupply + 1
             self.id = GameNFT.mintedCount
             self.category = category
             self.type = type
             self.meta = Meta.MetaBuilder(meta)
             self.changeBlock = getCurrentBlock().height
+            self.changeEpoch = 0
+           
+            let data = [category,type]
+            switch category {
+                case "avatar":
+                    // specifikus adatok hozzáfűzése
+                    let skills = (meta["skills"] as! [{String:AnyStruct}]).map(fun(skill:{String:AnyStruct}):String{
+                        let type = skill["type"] as! String
+                        return type
+                    })
+                    data.appendAll([
+                        meta["class"] as! String,
+                        meta["subClass"] as! String,
+                        GameNFT.stringArrayToJSON(skills),
+                        (meta["ascendent"] as! Int).toString()
+                    ])
+                    
+                    break
+                case "item":
+                    let needs = meta["needs"] as! [String]
+                    data.appendAll([
+                        GameNFT.stringArrayToJSON(needs),
+                        (meta["fate"] as! Int).toString(),
+                        (meta["ascendent"] as! Int).toString()
+                    ])
+                   
+                    break
+                case "spell":
+                    let needs = meta["needs"] as! [String]
+                    data.appendAll([
+                        GameNFT.stringArrayToJSON(needs),
+                        (meta["fate"] as! Int).toString()
+                    ])
+                   
+                    break
+                case "chest":
+                    data.appendAll([
+                        (meta["level"] as! Int).toString(),
+                        (meta["wLevel"] as! Int).toString(),
+                        meta["event"] as! String,
+                        meta["class"] as! String,
+                        (meta["ascendent"] as! Int).toString()
+                    ])
+                    if let charm = meta["charm"] as? {String:AnyStruct} {
+                        data.appendAll([
+                            meta["category"] as! String,
+                            meta["type"] as! String,
+                            (charm["level"] as! Int).toString()
+                        ])
+                    }
+                    break
+
+            }
+            self.change(kind: "mint", data: data)
         }
     }
 
@@ -253,13 +369,17 @@ access(all) contract GameNFT: NonFungibleToken {
         access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
 
         access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
-            let nft <- token as! @{GameNFT.INFT}
-            self.ownedNFTs[nft.id] <-! nft
+            if let ownerAddress = self.owner?.address {
+                let nft <- token as! @{GameNFT.INFT}  
+                nft.change(kind: "deposit", data:[ownerAddress.toString()])
+                self.ownedNFTs[nft.id] <-! nft
+            }else {
+                panic("deposit not allowed to ownerless collection!")
+            }
         }
 
         access(NonFungibleToken.Withdraw) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
-            let nft <- self.ownedNFTs.remove(key: withdrawID) 
-                ?? panic("NFT not found")
+            let nft <- self.ownedNFTs.remove(key: withdrawID) ?? panic("NFT not found")
             return <- nft
         }
 
@@ -332,7 +452,7 @@ access(all) contract GameNFT: NonFungibleToken {
             let spells = avatarMeta["spells"] as! {Int:UInt64}
             
             result[avatarData["id"] as! UInt64] = avatarData
-            for class in items.keys {
+            for class in items {
                 let id = items[class]!
                 if let itemRef = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}? {
                     let item = itemRef as! &GameNFT.MetaNFT
@@ -340,7 +460,7 @@ access(all) contract GameNFT: NonFungibleToken {
                     result[data["id"] as! UInt64] = data
                 }
             }
-            for index in spells.keys {
+            for index in spells {
                 let id = spells[index]!
                 if let spellRef = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}? {
                     let spell = spellRef as! &GameNFT.MetaNFT
@@ -351,13 +471,8 @@ access(all) contract GameNFT: NonFungibleToken {
             return result
         }
 
-        access(all) view fun getGear(avatarId:UInt64):{String:AnyStruct} {
-            let block = getCurrentBlock().id
-            let gear = self.getAvatar(avatarId: avatarId)
-            return {
-                "joinBlock":block,
-                "gear":gear
-            }
+        access(all) view fun getGear(avatarId:UInt64):{UInt64:{String:AnyStruct}} {
+            return self.getAvatar(avatarId: avatarId)
         }
 
         access(Equip) fun setAvatarEquipment(avatarId:UInt64,equipment:{String:AnyStruct}) {
@@ -466,6 +581,7 @@ access(all) contract GameNFT: NonFungibleToken {
 
     access(all) view fun getContractViews(resourceType: Type?): [Type] {
         return [
+            Type<MetadataViews.Display>(),
             Type<MetadataViews.NFTCollectionData>(),
             Type<MetadataViews.NFTCollectionDisplay>()
         ]
@@ -487,23 +603,31 @@ access(all) contract GameNFT: NonFungibleToken {
             case Type<MetadataViews.NFTCollectionDisplay>():
                 let logo = MetadataViews.Media(
                     file: MetadataViews.HTTPFile(
-                        url: "https://cloud.hobbyfork.com/images/collection/logo.png"
+                        url: "https://pot.hobbyfork.com/images/collection/logo.png"
                     ),
                     mediaType: "image/png"
                 )
                 let banner = MetadataViews.Media(
                     file: MetadataViews.HTTPFile(
-                        url: "https://cloud.hobbyfork.com/images/collection/banner.jpg"
+                        url: "https://pot.hobbyfork.com/images/collection/banner.jpg"
                     ),
                     mediaType: "image/jpeg"
                 )
                 return MetadataViews.NFTCollectionDisplay(
-                    name: "The Power of Truth",
-                    description: "",
-                    externalURL: MetadataViews.ExternalURL("https://cloud.hobbyfork.com/the_power_of_truth"),
+                    name: "Power of Truth",
+                    description: "This collection represents Power of Truth Collectibles.",
+                    externalURL: MetadataViews.ExternalURL("https://pot.hobbyfork.com"),
                     squareImage: logo,
                     bannerImage: banner,
-                    socials: {} 
+                    socials: {"twitter": MetadataViews.ExternalURL("https://x.com/pot_game_flow")}
+                )
+            case Type<MetadataViews.Display>():
+                return MetadataViews.Display(
+                    name: "Power of Truth",
+                    description: "This collection represents Power of Truth Collectibles.",
+                    thumbnail: MetadataViews.HTTPFile(
+                        url: "https://pot.hobbyfork.com/images/collection/logo.png"
+                    )
                 )
         }
         return nil
@@ -535,6 +659,7 @@ access(all) contract GameNFT: NonFungibleToken {
 
     init(){
         self.mintedCount = 0
+        self.totalSupply = 0
         self.CollectionStoragePath = StoragePath(identifier: "PotNFT_\(self.account.address.toString())")!
         self.CollectionPublicPath = PublicPath(identifier: "PotNFT_public_\(self.account.address.toString())")!
         self.minter <- create Minter()

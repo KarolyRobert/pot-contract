@@ -54,7 +54,7 @@ transaction(chests:[String]) {
        
         fun toChest(_ chest:String):{String:AnyStruct} {
             fun toInt(_ s: String): Int {
-                var result: Int = 0
+                var result = 0
                 for c in s.utf8 {
                     let digit: Int = Int(c) - 48
                     result = result * 10 + digit
@@ -65,10 +65,10 @@ transaction(chests:[String]) {
 
             let chestMeta:{String:AnyStruct} = {
                 "level":toInt(parts[5]),
-                "wLevel":toInt(parts[5]),
-                "event":parts[6],
-                "class":parts[7],
-                "ascendent":toInt(parts[8])
+                "wLevel":toInt(parts[6]),
+                "event":parts[7],
+                "class":parts[8],
+                "ascendent":toInt(parts[9])
             }
 
             let chestData:{String:AnyStruct} = {
@@ -78,13 +78,13 @@ transaction(chests:[String]) {
                 "monsterIndex":toInt(parts[3]),
                 "defeated":parts[4]
             }
-            if parts.length == 14 {
+            if parts.length == 15 {
                 let charm:{String:AnyStruct} = {
-                    "category":parts[9],
-                    "type":parts[10],
-                    "level":toInt(parts[11]),
-                    "quality":parts[12],
-                    "zone":toInt(parts[13])
+                    "category":parts[10],
+                    "type":parts[11],
+                    "level":toInt(parts[12]),
+                    "quality":parts[13],
+                    "zone":toInt(parts[14])
                 }
                 chestMeta["charm"] = charm
             }

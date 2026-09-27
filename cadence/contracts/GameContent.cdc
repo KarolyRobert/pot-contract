@@ -2,8 +2,10 @@
 
 access(all) contract GameContent {
 
+    access(all) event eventChangeEvent(eventName:String,eventEpoch:UInt64)
 
-    access(account) var eventName:String
+    access(all) var eventName:String
+    access(all) var eventEpoch:UInt64
   
     access(all) var currentVersion:Version
     access(all) let contentPaths: {String:StoragePath}
@@ -50,11 +52,11 @@ access(all) contract GameContent {
 
 
 
-        for key in contents.keys {
+        for key in contents {
             let value = contents[key]!
             let first = (value[value.keys[0]] as! {String:AnyStruct})["zone"]
             var zones:{Int:{String:AnyStruct}} = {}
-            if(first != nil){
+            if first != nil {
                 let zKeys = value.keys
                 for zkey in zKeys {
                     let item = value[zkey] as! {String:AnyStruct}
@@ -64,7 +66,7 @@ access(all) contract GameContent {
                     }
                     let currentZone = zones[zone]!
                     var itemValue:{String:AnyStruct} = {}
-                    for ikey in item.keys {
+                    for ikey in item {
                         if ikey != "zone" {
                             itemValue[ikey] = item[ikey]
                         }
@@ -77,10 +79,10 @@ access(all) contract GameContent {
 
 
             if zones.keys.length > 0 {
-                for z in zones.keys {
+                for z in zones {
                     let storeKey = "\(key)_\(z.toString())"
                     if self.contentPaths[storeKey] == nil {
-                        self.addKey(storeKey,StoragePath(identifier: "/\(storeKey)")!)
+                        self.addKey(storeKey,StoragePath(identifier: "\(storeKey)")!)
                         self.saveField(key: storeKey, value: zones[z]!)
                     }else{
                         self.updateField(key: storeKey, value: zones[z]!)
@@ -88,7 +90,7 @@ access(all) contract GameContent {
                 }
             }else{
                 if self.contentPaths[key] == nil {
-                    self.addKey(key,StoragePath(identifier: "/\(key)")!)
+                    self.addKey(key,StoragePath(identifier: "\(key)")!)
                     self.saveField(key: key, value: value)
                 }else{
                     self.updateField(key: key, value: value)
@@ -126,18 +128,17 @@ access(all) contract GameContent {
         return self.getContent(key:"consts")["consts"] as! &{String:AnyStruct}
     }
 
-    access(all) view fun getEventName():String {
-        return self.eventName
-    }
-
     access(account) fun setEvent(_ name:String){
         self.eventName = name
+        self.eventEpoch = self.eventEpoch + 1
+        emit eventChangeEvent(eventName:self.eventName,eventEpoch:self.eventEpoch)
     }
 
 
     init() {
         self.contentPaths = {}
         self.eventName = "default"
+        self.eventEpoch = 0
         self.currentVersion = Version(content:[],audit:[])
         let versions <- create OldVersions()
         self.account.storage.save(<- versions, to: /storage/Versions)

@@ -10,16 +10,11 @@ access(all) contract GameIdentity {
     access(all) let GamerStoragePath: StoragePath
     access(all) let GamerPublicPath: PublicPath
 
-    access(all) enum IdentityView:UInt8 {
-        access(all) case farmer // loot,burn,craft
-        access(all) case ranked // win,loose
-        access(all) case trader // spend/earn marketplace
-    }
+    access(all) let RANK_SCALE:Meta.MetaBuilder
 
     access(all) resource Gamer {
         access(all) var avatar:UInt64?
         access(all) var version:UInt64
-        access(all) var view:{IdentityView:Bool}
         access(all) let rank:Meta.MetaBuilder
         access(all) let farm:Meta.MetaBuilder
         access(all) let trade:Meta.MetaBuilder
@@ -42,18 +37,7 @@ access(all) contract GameIdentity {
                 }
             }
         }
-
-        access(Update) fun setView(view:{IdentityView:Bool}) {
-            self.view = view
-        }
-
-        access(self) view fun hasView(_ view:IdentityView):Bool {
-            if let role = self.view[view] {
-                return role
-            }
-            return false
-        }
-
+   
         access(all) view fun getQuest():{String:AnyStruct} {
             return self.quest.build()
         }
@@ -77,16 +61,11 @@ access(all) contract GameIdentity {
                     }
                 }
             }
-
-            if self.hasView(IdentityView.farmer) {
-                result["farm"] = self.farm.build()
-            }
-            if self.hasView(IdentityView.ranked) {
-                result["rank"] = self.rank.build()
-            }
-            if self.hasView(IdentityView.trader) {
-                result["trade"] = self.trade.build()
-            }
+            result["farm"] = self.farm.build()
+            result["rank"] = self.rank.build()
+            result["trade"] = self.trade.build()
+            result["quest"] = self.quest.build()
+            result["rank_scale"] = GameIdentity.RANK_SCALE.build()
             return result
         }
 
@@ -109,17 +88,79 @@ access(all) contract GameIdentity {
             meta["burn"] = burn
             self.farm.update(meta)
         }
+      
+        access(self) fun setWinrate(_ rankName:String,_ victory:Bool){
+            var meta = self.rank.build()
 
-        access(account) fun setRank(victory:Bool){
-            let meta = self.rank.build()
-            let rank = meta["rank"] as! {String:AnyStruct}
+            let rank = meta[rankName] as! {String:AnyStruct}
             if victory {
                 rank["win"] = (rank["win"] as! Int) + 1
             }else{
                 rank["lose"] = (rank["lose"] as! Int) + 1
             }
-            meta["rank"] = rank
+            meta[rankName] = rank
             self.rank.update(meta)
+        }
+
+        access(self) fun win(_ rankName:String,_ levelFactor:UFix64){
+            let BASE = 25.0
+            let RANK_SCALE = GameIdentity.RANK_SCALE.build()
+            var SCALE = RANK_SCALE[rankName] as! Int
+            let rank = self.rank.build()
+            let rankPoint = rank[rankName] as! Int
+            let factor = UFix64(SCALE) / UFix64(SCALE + rankPoint)
+            let gain = Int(BASE * levelFactor * factor)
+            let newRank = rankPoint + gain
+            rank[rankName] = newRank
+            if SCALE < newRank {
+                RANK_SCALE[rankName] = newRank
+                GameIdentity.RANK_SCALE.update(RANK_SCALE)
+            }
+            self.rank.update(rank)
+        }
+
+        access(self) fun lose(_ rankName:String,_ levelFactor:UFix64){
+            let BASE = 25.0
+            let RANK_SCALE = GameIdentity.RANK_SCALE.build()
+            var SCALE = RANK_SCALE[rankName] as! Int
+            let rank = self.rank.build()
+            let rankPoint = rank[rankName] as! Int
+            let factor = 1.0 + (UFix64(rankPoint) / UFix64(SCALE))
+            let loss = Int(BASE * levelFactor * factor)
+            var newRank = rankPoint - loss
+            if newRank < 0 {
+                newRank = 0
+            }
+            rank[rankName] = newRank
+            self.rank.update(rank)
+        }
+
+        access(account) fun setWin(type:String,levelFactor:UFix64){
+            switch type {
+                case "avatar":
+                    self.setWinrate("monster",true)
+                    self.win("monsterRank",levelFactor)
+                case "monster":
+                    self.setWinrate("expedition",true)
+                    self.win("hunterRank",levelFactor)
+                case "pvp":
+                    self.setWinrate("arena",true)
+                    self.win("arenaRank",levelFactor)
+            }
+        }
+
+        access(account) fun setLose(type:String,levelFactor:UFix64){
+              switch type {
+                case "avatar":
+                    self.setWinrate("expedition",false)
+                    self.lose("hunterRank",levelFactor)
+                case "monster":
+                    self.setWinrate("monster",false)
+                    self.lose("monsterRank",levelFactor)
+                case "pvp":
+                    self.setWinrate("arena",false)
+                    self.lose("arenaRank",levelFactor)
+            }
         }
 
         access(account) fun setCraft(success: Bool) {
@@ -156,10 +197,15 @@ access(all) contract GameIdentity {
         init(){
             self.avatar = nil
             self.version = 0
-            self.view = {}
+          //  self.view = {IdentityView.farmer:true,IdentityView.ranked:true,IdentityView.trader:true}
             let zero:UFix64 = 0.0
             self.rank = Meta.MetaBuilder({
-                "rank":{"win":0,"lose":0}
+                "monster":{"win":0,"lose":0},
+                "expedition":{"win":0,"lose":0},
+                "arena":{"win":0,"lose":0},
+                "monsterRank":0,
+                "hunterRank":0,
+                "arenaRank":0
             })
             self.farm = Meta.MetaBuilder({
                 "craft":{"success":0,"unsuccess":0},
@@ -189,5 +235,10 @@ access(all) contract GameIdentity {
     init() {
         self.GamerStoragePath = StoragePath(identifier: "Gamer_\(self.account.address.toString())")!
         self.GamerPublicPath = PublicPath(identifier: "Gamer_public_\(self.account.address.toString())")!
+        self.RANK_SCALE = Meta.MetaBuilder({
+            "monsterRank":1000,
+            "hunterRank":1000,
+            "arenaRank":1000
+        })
     }
 }

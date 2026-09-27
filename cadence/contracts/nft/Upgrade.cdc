@@ -181,16 +181,17 @@ access(all) contract Upgrade {
 
                 let randomRoll = rng.random()
                 emit RollReveal(chance:chance,roll:randomRoll)
-                if chance > randomRoll { // level up , change aids os alcs
+                if chance > randomRoll { // level up , change aids or alcs
                     gamer.setCraft(success: true)
                     // level up
                     nftMeta["level"] = nftLevel + 1
+
                     // scroll needs
                     let newNeedCount = Utils.getNeedCount(base: baseNeedCount, level:nftLevel + 1, category: nft.category, Consts: consts)//self.getNeedCount(base: baseNeedCount, category: nft.category, level:nftLevel + 1)
                     let newNeeds = Utils.chooseMore(needNames,rng.intArray(length:newNeedCount,max:needNames.length))
                     nftMeta["needs"] = newNeeds
                     nft.meta.update(nftMeta)
-
+                    nft.change(kind: "upgrade", data:newNeeds)
                     resultIDs.append(nft.id)
                     result.append(<- nft)
                 }else{ // unsuccess
@@ -204,10 +205,10 @@ access(all) contract Upgrade {
                         nftMeta["needs"] = newNeeds
                         nftMeta["fate"] = (nftMeta["fate"] as! Int) - 1
                         nft.meta.update(nftMeta)
+                        nft.change(kind: "unsuccess_upgrade", data:newNeeds)
                         resultIDs.append(nft.id)
                         result.append(<-nft)
                     }else{ // destroy all mint uniqs 
-
                         let newNeedCount = Utils.getNeedCount(base: baseNeedCount, level: nftLevel, category: nft.category, Consts: consts) // self.getNeedCount(base: baseNeedCount, category: nft.category, level:nftLevel)
                         let ascendent = nft.category == "spell" ? Int(getCurrentBlock().timestamp) : nftMeta["ascendent"] as! Int
                         let salvage <- MintSalvage.salvage(category: nft.category,ascendent:ascendent, zone: zone, count: newNeedCount, currentEvent: currentEvent, rng:rng.nextRNG())
